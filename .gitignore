@@ -12,10 +12,6 @@ ansible/logs/
 logs/
 *.log
 
-# CI-generated pipeline reports (runner-local; not versioned)
-reports/*
-!reports/README.md
-
 # Ansible local state
 ansible/.ansible/
 
