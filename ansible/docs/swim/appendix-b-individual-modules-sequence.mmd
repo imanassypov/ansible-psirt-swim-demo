@@ -62,11 +62,4 @@ sequenceDiagram
         CatC-->>PB: task complete
     end
 
-    rect rgb(230,240,255)
-        Note over PB,CatC: PHASE 40 — Postcheck (IMAGE compliance)
-        PB->>CatC: compliance_device(deviceIds, categories=[IMAGE])
-        CatC-->>PB: taskId
-        PB->>CatC: task_info — poll until endTime
-        PB->>CatC: compliance_device_details_info(complianceType=IMAGE)
-        CatC-->>PB: Compliant: 6 / 6
-    end
+    Note over PB,CatC: Verification — 00.2 -e post_activate=true; combined pre/post report from 00_preflight baseline

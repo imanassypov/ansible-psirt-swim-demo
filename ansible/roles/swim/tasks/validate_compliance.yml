@@ -1,0 +1,386 @@
+---
+# =============================================================================
+# swim / validate_compliance.yml  —  Stage 00.2: IMAGE compliance validation
+# =============================================================================
+# Modes (set via extra-var post_activate):
+#   default (post_activate=false): pre-upgrade baseline — resync, IMAGE compliance,
+#                                  evidence to 00_preflight.json, pre-upgrade report.
+#   post_activate=true:            post-activation check — resync, IMAGE compliance,
+#                                  load latest pre-upgrade baseline from logs/,
+#                                  combined pre/post report + 00_post_activate.json.
+#
+# Optional: preflight_run_id=<YYYYmmdd-HHMMSS> pins the pre-upgrade baseline file
+#           instead of auto-selecting the newest *-00_preflight.json.
+# =============================================================================
+
+- name: Resolve validate-compliance mode
+  ansible.builtin.set_fact:
+    swim_validate_post_activate: >-
+      {{ (post_activate | default(false) | string | lower)
+         in ['true', '1', 'yes', 'post-activate', 'post_activate'] }}
+
+- name: Load SWIM image details from settings.json
+  ansible.builtin.import_tasks: load_swim_details.yml
+
+- name: Derive target sites from golden tag images
+  ansible.builtin.set_fact:
+    swim_target_sites: >-
+      {{ swim_details.golden_tag_images
+         | map(attribute='tagging_details.site_name')
+         | unique | list }}
+
+- name: Resync devices at target sites to refresh inventory state
+  cisco.catalystcenter.inventory_workflow_manager:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    catalystcenter_log: "{{ catalystcenter_log }}"
+    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
+    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
+    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    catalystcenter_api_task_timeout: "{{ catalystcenter_api_task_timeout }}"
+    catalystcenter_task_poll_interval: "{{ catalystcenter_task_poll_interval }}"
+    state: merged
+    config:
+      - site_name: "{{ item }}"
+        device_resync: true
+        force_sync: false
+  loop: "{{ swim_target_sites }}"
+  loop_control:
+    label: "{{ item }}"
+  register: compliance_resync
+  tags: [resync]
+
+- name: Run IMAGE compliance check per target site
+  cisco.catalystcenter.network_compliance_workflow_manager:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    catalystcenter_log: "{{ catalystcenter_log }}"
+    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
+    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
+    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    catalystcenter_api_task_timeout: "{{ catalystcenter_api_task_timeout }}"
+    catalystcenter_task_poll_interval: "{{ catalystcenter_task_poll_interval }}"
+    state: merged
+    config:
+      - site_name: "{{ item }}"
+        run_compliance: true
+        run_compliance_categories:
+          - IMAGE
+        sync_device_config: false
+  loop: "{{ swim_target_sites }}"
+  loop_control:
+    label: "{{ item }}"
+  register: compliance_run
+
+- name: Evaluate compliance run for hard errors
+  vars:
+    compliance_results: "{{ compliance_run.results | default([]) }}"
+    skipped_devices: >-
+      {{ compliance_results
+         | map(attribute='msg')
+         | select('mapping')
+         | map(attribute='Run Compliance Check Skipped for following device(s)')
+         | select('defined')
+         | map(attribute='skipped_devices')
+         | flatten }}
+    failed_compliance: >-
+      {{ compliance_results
+         | selectattr('failed', 'defined')
+         | selectattr('failed')
+         | list }}
+    resync_failed: "{{ compliance_resync.failed | default(false) }}"
+  ansible.builtin.set_fact:
+    compliance_skipped_devices: "{{ skipped_devices }}"
+    compliance_failed_tasks: "{{ failed_compliance }}"
+    compliance_resync_failed: "{{ resync_failed }}"
+    compliance_has_issues: >-
+      {{ (skipped_devices | length > 0)
+         or (failed_compliance | length > 0)
+         or (resync_failed | bool) }}
+
+- name: Pre-upgrade compliance validation and report
+  when: not swim_validate_post_activate
+  block:
+    - name: Fail when pre-upgrade check has hard errors
+      ansible.builtin.fail:
+        msg: >-
+          Pre-upgrade compliance hard errors — resync_failed={{ compliance_resync_failed }},
+          compliance_task_failures={{ compliance_failed_tasks | length }}.
+          See logs/{{ swim_run_id }}-00_preflight.json for details.
+      when: (compliance_resync_failed | bool) or (compliance_failed_tasks | length > 0)
+
+    - name: Write pre-upgrade evidence
+      ansible.builtin.include_tasks: write_evidence.yml
+      vars:
+        evidence_name: 00_preflight
+        evidence_data: "{{ {'phase': 'pre-upgrade', 'resync': compliance_resync | default({}), 'compliance': compliance_run} }}"
+
+    - name: Build pre-upgrade site reports
+      ansible.builtin.include_tasks: build_compliance_site_reports.yml
+      vars:
+        compliance_register: "{{ compliance_run }}"
+
+    - name: Assemble pre-upgrade compliance report
+      ansible.builtin.set_fact:
+        swim_compliance_report:
+          phase: pre-upgrade
+          stage: validate_compliance
+          run_id: "{{ swim_run_id }}"
+          sites: "{{ compliance_site_reports }}"
+          totals:
+            compliant: "{{ compliance_site_reports | map(attribute='compliant') | map('int') | sum }}"
+            non_compliant: "{{ compliance_site_reports | map(attribute='non_compliant') | map('int') | sum }}"
+            total_checked: "{{ compliance_site_reports | map(attribute='total_checked') | map('int') | sum }}"
+          skipped_devices: "{{ compliance_skipped_devices | default([]) }}"
+          resync_failed: "{{ compliance_resync_failed | default(false) }}"
+          compliance_task_failures: "{{ compliance_failed_tasks | default([]) | length }}"
+
+    - name: Format pre-upgrade compliance report table
+      vars:
+        _compliance_report_output_json: >-
+          {% set lines = [] %}
+          {% set _ = lines.append('=== SWIM IMAGE Compliance — Pre-Upgrade (' ~ swim_run_id ~ ') ===') %}
+          {% set _ = lines.append('') %}
+          {% for site in swim_compliance_report.sites %}
+          {% set _ = lines.append('Site: ' ~ site.site) %}
+          {% set _ = lines.append(
+               'Compliant: ' ~ site.compliant
+               ~ ' | Non-compliant: ' ~ site.non_compliant
+               ~ ' | Checked: ' ~ site.total_checked) %}
+          {% set _ = lines.append('') %}
+          {% set _ = lines.append(
+               'Device'.ljust(16)
+               ~ 'Status'.ljust(16)
+               ~ 'Configured'.ljust(22)
+               ~ 'Intended') %}
+          {% set _ = lines.append(
+               ('-' * 16) ~ '  '
+               ~ ('-' * 16) ~ '  '
+               ~ ('-' * 22) ~ '  '
+               ~ ('-' * 22)) %}
+          {% for dev in site.devices %}
+          {% set _ = lines.append(
+               (dev.device | string).ljust(16)
+               ~ (dev.status | string).ljust(16)
+               ~ (dev.configured_image | string).ljust(22)
+               ~ (dev.intended_image | string)) %}
+          {% endfor %}
+          {% if site.skipped_devices | length > 0 %}
+          {% set _ = lines.append('') %}
+          {% set _ = lines.append('Skipped: ' ~ (site.skipped_devices | join(', '))) %}
+          {% endif %}
+          {% set _ = lines.append('') %}
+          {% endfor %}
+          {% set totals = swim_compliance_report.totals %}
+          {% set _ = lines.append(
+               'Overall — compliant: ' ~ totals.compliant
+               ~ ', non-compliant: ' ~ totals.non_compliant
+               ~ ', checked: ' ~ totals.total_checked) %}
+          {% if swim_compliance_report.skipped_devices | length > 0 %}
+          {% set _ = lines.append(
+               'Skipped devices: ' ~ (swim_compliance_report.skipped_devices | join(', '))) %}
+          {% endif %}
+          {% set _ = lines.append('Evidence file: logs/' ~ swim_run_id ~ '-00_preflight.json') %}
+          {{ lines | to_json }}
+      ansible.builtin.set_fact:
+        swim_compliance_report_output: "{{ _compliance_report_output_json | from_json }}"
+
+    - name: Output pre-upgrade compliance report
+      ansible.builtin.debug:
+        msg: "{{ swim_compliance_report_output }}"
+
+- name: Post-activation compliance validation and pre/post report
+  when: swim_validate_post_activate
+  block:
+    - name: Fail when post-activation check has hard errors
+      ansible.builtin.fail:
+        msg: >-
+          Post-activation compliance hard errors — resync_failed={{ compliance_resync_failed }},
+          compliance_task_failures={{ compliance_failed_tasks | length }}.
+          See logs/{{ swim_run_id }}-00_post_activate.json for details.
+      when: (compliance_resync_failed | bool) or (compliance_failed_tasks | length > 0)
+
+    - name: Write post-activation evidence
+      ansible.builtin.include_tasks: write_evidence.yml
+      vars:
+        evidence_name: 00_post_activate
+        evidence_data: "{{ {'phase': 'post-activate', 'resync': compliance_resync | default({}), 'compliance': compliance_run} }}"
+
+    - name: Build post-activation site reports
+      ansible.builtin.include_tasks: build_compliance_site_reports.yml
+      vars:
+        compliance_register: "{{ compliance_run }}"
+
+    - name: Retain post-activation site reports
+      ansible.builtin.set_fact:
+        post_activate_site_reports: "{{ compliance_site_reports }}"
+
+    - name: Resolve pre-upgrade baseline filename
+      when: preflight_run_id is not defined or preflight_run_id | length == 0
+      block:
+        - name: Find pre-upgrade preflight evidence files
+          ansible.builtin.find:
+            paths: "{{ playbook_dir }}/../logs"
+            patterns: "*-00_preflight.json"
+            file_type: file
+          register: preflight_evidence_find
+
+        - name: Select newest pre-upgrade baseline (exclude this run)
+          vars:
+            _baseline_candidates: >-
+              {{ preflight_evidence_find.files
+                 | map(attribute='path')
+                 | map('basename')
+                 | reject('search', '^' ~ swim_run_id ~ '-')
+                 | sort
+                 | list }}
+          ansible.builtin.set_fact:
+            preflight_baseline_filename: "{{ _baseline_candidates | last | default('') }}"
+
+    - name: Pin pre-upgrade baseline from preflight_run_id
+      ansible.builtin.set_fact:
+        preflight_baseline_filename: "{{ preflight_run_id }}-00_preflight.json"
+      when: preflight_run_id is defined and preflight_run_id | length > 0
+
+    - name: Require a pre-upgrade baseline for post-activation report
+      ansible.builtin.fail:
+        msg: >-
+          No pre-upgrade baseline found in logs/. Run
+          playbooks/00.2_swim_validate_compliance.yml first (without post_activate),
+          or pass -e preflight_run_id=<run_id> from that baseline run.
+      when: preflight_baseline_filename | default('') | length == 0
+
+    - name: Load pre-upgrade baseline evidence
+      ansible.builtin.slurp:
+        src: "{{ playbook_dir }}/../logs/{{ preflight_baseline_filename }}"
+      register: preflight_baseline_slurp
+
+    - name: Parse pre-upgrade baseline evidence
+      ansible.builtin.set_fact:
+        preflight_baseline_evidence: "{{ preflight_baseline_slurp.content | b64decode | from_json }}"
+        preflight_baseline_run_id: "{{ preflight_baseline_filename | regex_replace('-00_preflight\\.json$', '') }}"
+
+    - name: Build pre-upgrade site reports from baseline evidence
+      ansible.builtin.include_tasks: build_compliance_site_reports.yml
+      vars:
+        compliance_register: "{{ preflight_baseline_evidence.compliance }}"
+
+    - name: Retain pre-upgrade site reports
+      ansible.builtin.set_fact:
+        pre_upgrade_site_reports: "{{ compliance_site_reports }}"
+
+    - name: Assemble pre/post compliance summary
+      ansible.builtin.set_fact:
+        swim_compliance_pre_post_report:
+          phase: pre-post
+          stage: validate_compliance
+          post_run_id: "{{ swim_run_id }}"
+          pre_run_id: "{{ preflight_baseline_run_id }}"
+          pre_upgrade:
+            sites: "{{ pre_upgrade_site_reports }}"
+            totals:
+              compliant: "{{ pre_upgrade_site_reports | map(attribute='compliant') | map('int') | sum }}"
+              non_compliant: "{{ pre_upgrade_site_reports | map(attribute='non_compliant') | map('int') | sum }}"
+              total_checked: "{{ pre_upgrade_site_reports | map(attribute='total_checked') | map('int') | sum }}"
+          post_activate:
+            sites: "{{ post_activate_site_reports }}"
+            totals:
+              compliant: "{{ post_activate_site_reports | map(attribute='compliant') | map('int') | sum }}"
+              non_compliant: "{{ post_activate_site_reports | map(attribute='non_compliant') | map('int') | sum }}"
+              total_checked: "{{ post_activate_site_reports | map(attribute='total_checked') | map('int') | sum }}"
+          skipped_devices: "{{ compliance_skipped_devices | default([]) }}"
+
+    - name: Write pre/post compliance summary evidence
+      ansible.builtin.include_tasks: write_evidence.yml
+      vars:
+        evidence_name: 00_compliance_pre_post
+        evidence_data: "{{ swim_compliance_pre_post_report }}"
+
+    - name: Format pre/post compliance report table
+      vars:
+        _pre_post_report_output_json: >-
+          {% set lines = [] %}
+          {% set _ = lines.append('=== SWIM IMAGE Compliance — Pre vs Post Activation ===') %}
+          {% set _ = lines.append('Pre-upgrade run:  ' ~ preflight_baseline_run_id) %}
+          {% set _ = lines.append('Post-activate run: ' ~ swim_run_id) %}
+          {% set _ = lines.append('') %}
+          {% set pre_totals = swim_compliance_pre_post_report.pre_upgrade.totals %}
+          {% set post_totals = swim_compliance_pre_post_report.post_activate.totals %}
+          {% set _ = lines.append(
+               'Overall PRE  — compliant: ' ~ pre_totals.compliant
+               ~ ', non-compliant: ' ~ pre_totals.non_compliant
+               ~ ', checked: ' ~ pre_totals.total_checked) %}
+          {% set _ = lines.append(
+               'Overall POST — compliant: ' ~ post_totals.compliant
+               ~ ', non-compliant: ' ~ post_totals.non_compliant
+               ~ ', checked: ' ~ post_totals.total_checked) %}
+          {% set _ = lines.append('') %}
+          {% for post_site in post_activate_site_reports %}
+          {% set pre_site = pre_upgrade_site_reports
+               | selectattr('site', 'equalto', post_site.site)
+               | first
+               | default({'devices': [], 'skipped_devices': []}) %}
+          {% set _ = lines.append('Site: ' ~ post_site.site) %}
+          {% set _ = lines.append('') %}
+          {% set _ = lines.append(
+               'Device'.ljust(16)
+               ~ 'Pre Status'.ljust(16)
+               ~ 'Post Status'.ljust(16)
+               ~ 'Pre Configured'.ljust(22)
+               ~ 'Post Configured') %}
+          {% set _ = lines.append(
+               ('-' * 16) ~ '  '
+               ~ ('-' * 16) ~ '  '
+               ~ ('-' * 16) ~ '  '
+               ~ ('-' * 22) ~ '  '
+               ~ ('-' * 22)) %}
+          {% set device_names = [] %}
+          {% for dev in pre_site.devices %}
+          {% set _ = device_names.append(dev.device) %}
+          {% endfor %}
+          {% for dev in post_site.devices %}
+          {% if dev.device not in device_names %}
+          {% set _ = device_names.append(dev.device) %}
+          {% endif %}
+          {% endfor %}
+          {% for device_name in device_names | sort %}
+          {% set pre_dev = pre_site.devices | selectattr('device', 'equalto', device_name) | first | default({}) %}
+          {% set post_dev = post_site.devices | selectattr('device', 'equalto', device_name) | first | default({}) %}
+          {% set _ = lines.append(
+               (device_name | string).ljust(16)
+               ~ (pre_dev.status | default('n/a') | string).ljust(16)
+               ~ (post_dev.status | default('n/a') | string).ljust(16)
+               ~ (pre_dev.configured_image | default('n/a') | string).ljust(22)
+               ~ (post_dev.configured_image | default('n/a') | string)) %}
+          {% endfor %}
+          {% if (pre_site.skipped_devices | default([]) | length > 0)
+                or (post_site.skipped_devices | default([]) | length > 0) %}
+          {% set _ = lines.append('') %}
+          {% set _ = lines.append(
+               'Skipped PRE:  ' ~ (pre_site.skipped_devices | default([]) | join(', ') | default('none'))) %}
+          {% set _ = lines.append(
+               'Skipped POST: ' ~ (post_site.skipped_devices | default([]) | join(', ') | default('none'))) %}
+          {% endif %}
+          {% set _ = lines.append('') %}
+          {% endfor %}
+          {% set _ = lines.append('Evidence files:') %}
+          {% set _ = lines.append('  logs/' ~ preflight_baseline_run_id ~ '-00_preflight.json') %}
+          {% set _ = lines.append('  logs/' ~ swim_run_id ~ '-00_post_activate.json') %}
+          {% set _ = lines.append('  logs/' ~ swim_run_id ~ '-00_compliance_pre_post.json') %}
+          {{ lines | to_json }}
+      ansible.builtin.set_fact:
+        swim_compliance_report_output: "{{ _pre_post_report_output_json | from_json }}"
+
+    - name: Output pre/post compliance report
+      ansible.builtin.debug:
+        msg: "{{ swim_compliance_report_output }}"

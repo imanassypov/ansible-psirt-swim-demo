@@ -14,11 +14,11 @@
 # and 09 (provisioning), then synthesises the exact swim_details structure the
 # playbooks already loop over:
 #
-#   swim_details.import_images       → import_and_tag.yml (import task)   [03]
-#   swim_details.golden_tag_images   → import_and_tag.yml (tag task)      [03]
-#   swim_details.distribute_images   → distribute.yml                     [04]
-#   swim_details.activate_images     → activate.yml                       [05]
-#   swim_details.rollback_images     → rollback.yml                       [07]
+#   swim_details.import_images       → import_and_tag.yml (import task)   [01.1]
+#   swim_details.golden_tag_images   → import_and_tag.yml (tag task)      [01.1]
+#   swim_details.distribute_images   → distribute.yml                     [01.2]
+#   swim_details.activate_images     → activate.yml                       [01.3]
+#   swim_details.rollback_images     → rollback.yml                       [02.1]
 #
 # All image facts come from the per-project `swim` block in settings.json; the
 # site_name is DERIVED from the same HierarchyParent/Area/Bldg/Floor fields used

@@ -1,0 +1,126 @@
+# =============================================================================
+# SWIM PSIRT pipeline — triggered when Settings/settings.json changes
+# =============================================================================
+# Sequence:
+#   1. 00.2 validate compliance (pre-upgrade baseline)
+#   2. 01.1 import and tag
+#   3. 01.2 distribute
+#   4. 01.3 activate (reloads devices)
+#   5. 00.2 validate compliance (post-activation, pre/post report)
+#   6. Commit evidence + summary under reports/
+#
+# Requires a self-hosted runner with lab reachability to Catalyst Center.
+# GitHub-hosted runners cannot reach private lab controllers (198.18.x).
+# =============================================================================
+name: SWIM PSIRT Pipeline
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'Settings/settings.json'
+  workflow_dispatch:
+
+concurrency:
+  group: swim-psirt-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  swim-remediation:
+    runs-on: self-hosted
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible and collections
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ansible.txt
+          cd ansible
+          ansible-galaxy collection install -r collections/requirements.yml
+          ansible-galaxy collection install ansible.utils
+
+      - name: Configure Catalyst Center vault
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+          CATC_USERNAME: ${{ secrets.CATC_USERNAME }}
+          CATC_PASSWORD: ${{ secrets.CATC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ANSIBLE_VAULT_PASSWORD:-}" || -z "${CATC_USERNAME:-}" || -z "${CATC_PASSWORD:-}" ]]; then
+            echo "Missing required secrets: ANSIBLE_VAULT_PASSWORD, CATC_USERNAME, CATC_PASSWORD" >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$ANSIBLE_VAULT_PASSWORD" > .vault_pass
+          printf '%s\n' \
+            '---' \
+            "catc_username: ${CATC_USERNAME}" \
+            "catc_password: ${CATC_PASSWORD}" \
+            > ansible/inventory/group_vars/catalyst_center/vault.yml
+          ansible-vault encrypt ansible/inventory/group_vars/catalyst_center/vault.yml \
+            --vault-password-file .vault_pass
+
+      - name: Record pipeline start time
+        id: pipeline
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Run SWIM pipeline
+        id: swim
+        working-directory: ansible
+        run: |
+          set -euo pipefail
+          echo "=== Stage 00.2 — pre-upgrade compliance ==="
+          ansible-playbook playbooks/00.2_swim_validate_compliance.yml
+
+          echo "=== Stage 01.1 — import and golden tag ==="
+          ansible-playbook playbooks/01.1_swim_import_and_tag.yml
+
+          echo "=== Stage 01.2 — distribute to flash ==="
+          ansible-playbook playbooks/01.2_swim_distribute.yml
+
+          echo "=== Stage 01.3 — activate (device reload) ==="
+          ansible-playbook playbooks/01.3_swim_activate.yml
+
+          echo "=== Stage 00.2 — post-activation compliance ==="
+          ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e post_activate=true
+
+      - name: Collect reports
+        if: always() && steps.swim.outcome != 'cancelled'
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          ./scripts/collect-swim-reports.sh \
+            "${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}" \
+            "${{ steps.pipeline.outputs.start_epoch }}"
+
+      - name: Commit and push reports
+        if: always() && steps.swim.outcome != 'cancelled'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          if git diff --cached --quiet; then
+            echo "No new report artifacts to commit."
+            exit 0
+          fi
+          git commit -m "$(cat <<EOF
+          chore(reports): SWIM pipeline evidence for settings.json change
+
+          Workflow run: ${GITHUB_RUN_NUMBER}
+          Commit: ${GITHUB_SHA}
+          EOF
+          )"
+          git push

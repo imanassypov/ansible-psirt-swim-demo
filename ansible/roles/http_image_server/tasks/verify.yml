@@ -1,8 +1,8 @@
 ---
 # =============================================================================
-# http_image_server / verify.yml  —  Stage 01 (A.5): prove the URLs work
+# http_image_server / verify.yml  —  Stage 00.1 (A.5): prove the URLs work
 # =============================================================================
-# Confirms each image is actually downloadable before stage 03 tries to
+# Confirms each image is actually downloadable before stage 01.1 tries to
 # import it. Checks twice — from the server itself and from the control node —
 # because a working localhost fetch with an unreachable public IP is the common
 # failure mode (firewall or routing), and the two look identical in nginx logs.
@@ -21,7 +21,7 @@
 #                             public IP; .status, .content_type, .content_length
 #       Asserts per image: status 200 and content_type application/octet-stream.
 #       Prints the published URL, size and content type for each image — the URL
-#       must match settings.json swim.image_server_base_url used by stage 03.
+#       must match settings.json swim.image_server_base_url used by stage 01.1.
 #       Output is filename-only; control-node paths are never printed.
 # =============================================================================
 

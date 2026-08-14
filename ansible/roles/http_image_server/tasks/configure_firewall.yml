@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# http_image_server / configure_firewall.yml  —  Stage 01 (A.4): open TCP/80
+# http_image_server / configure_firewall.yml  —  Stage 00.1 (A.4): open TCP/80
 # =============================================================================
 # Allows inbound HTTP so Catalyst Center can reach the image URLs. Every task
 # is conditional: hosts without ufw, or with ufw installed but inactive, are

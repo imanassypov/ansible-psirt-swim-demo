@@ -1,5 +1,5 @@
 ---
-# Catalyst Center connection parameters for the SWIM (01–07) playbooks.
+# Catalyst Center connection parameters for the SWIM (00.1, 00.2, 01.1–01.3, 02.1) playbooks.
 # Secrets (catc_username / catc_password) come from vault.yml in this folder.
 
 # cisco.catalystcenter module params — used by roles/swim

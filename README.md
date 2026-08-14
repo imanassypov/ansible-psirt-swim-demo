@@ -28,13 +28,14 @@ evidence file for every stage so the change is auditable after the fact.
 7. [Configuration](#configuration)
 8. [The Data Model](#the-data-model)
 9. [Running the Demo](#running-the-demo)
-10. [How Each Stage Works](#how-each-stage-works)
-11. [Evidence Files](#evidence-files)
-12. [Rollback](#rollback)
-13. [Debug Mode](#debug-mode)
-14. [Troubleshooting](#troubleshooting)
-15. [Security Notes](#security-notes)
-16. [Documentation Maintenance](#documentation-maintenance)
+10. [GitHub Actions (settings.json trigger)](#github-actions-settingsjson-trigger)
+11. [How Each Stage Works](#how-each-stage-works)
+12. [Evidence Files](#evidence-files)
+13. [Rollback](#rollback)
+14. [Debug Mode](#debug-mode)
+15. [Troubleshooting](#troubleshooting)
+16. [Security Notes](#security-notes)
+17. [Documentation Maintenance](#documentation-maintenance)
 
 ---
 
@@ -58,13 +59,12 @@ The point of the demo: **the advisory response becomes a code change**
 
 | Stage | Playbook | Disruptive? | Purpose |
 |---|---|---|---|
-| 01 | `01_swim_deploy_http_image_server.yml` | No | Stands up nginx on an Ubuntu host and stages the `.bin` images so CatC can pull them by URL. |
-| 02 | `02_swim_validate_compliance.yml` | No | Resyncs inventory at each target site and captures the **pre-upgrade IMAGE compliance baseline**. |
-| 03 | `03_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository and marks the upgrade image **Golden**. |
-| 04 | `04_swim_distribute.yml` | No | Copies the golden image to each device's flash. Run ahead of the window. |
-| 05 | `05_swim_activate.yml` | **YES — reloads devices** | Activates the golden image. Maintenance window only. |
-| 06 | `06_swim_postcheck.yml` | No | Re-runs IMAGE compliance and proves the fleet is remediated. |
-| 07 | `07_swim_rollback.yml` | **YES — reloads devices** | Emergency recovery: re-tags and activates the previous image. Double-gated. |
+| 00.1 | `00.1_swim_deploy_image_server.yml` | No | Stands up nginx on an Ubuntu host and stages the `.bin` images so CatC can pull them by URL. |
+| 00.2 | `00.2_swim_validate_compliance.yml` | No | Pre-upgrade IMAGE compliance baseline (default). With `-e post_activate=true`, runs post-activation check and prints a combined pre/post report. |
+| 01.1 | `01.1_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository and marks the upgrade image **Golden**. |
+| 01.2 | `01.2_swim_distribute.yml` | No | Copies the golden image to each device's flash. Run ahead of the window. |
+| 01.3 | `01.3_swim_activate.yml` | **YES — reloads devices** | Activates the golden image. Maintenance window only. |
+| 02.1 | `02.1_swim_rollback.yml` | **YES — reloads devices** | Emergency recovery: re-tags and activates the previous image. Double-gated. |
 
 ---
 
@@ -99,7 +99,7 @@ The point of the demo: **the advisory response becomes a code change**
 ```
 
 Note the image transfer direction: **Catalyst Center pulls from nginx.** Stage
-01 exists purely so 03 can import by URL instead of a browser upload.
+00.1 exists purely so 01.1 can import by URL instead of a browser upload.
 
 ---
 
@@ -127,9 +127,14 @@ Note the image transfer direction: **Catalyst Center pulls from nginx.** Stage
 
 ```
 ansible-psirt-swim-demo/
+├── .github/workflows/
+│   └── swim-settings-trigger.yml       # CI: settings.json → SWIM pipeline → reports/
 ├── scripts/
 │   ├── check-readme-sync.sh            # validates README matches repo structure
-│   └── install-git-hooks.sh            # installs pre-commit README sync hook
+│   ├── collect-swim-reports.sh         # copies evidence JSON into reports/
+│   ├── install-git-hooks.sh            # installs pre-commit README sync hook
+│   ├── render-swim-report.py           # builds REPORT.md from compliance evidence
+│   └── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
 ├── .cursor/
 │   ├── rules/readme-sync.mdc           # agent policy — keep README current
 │   └── hooks.json                      # stop hook prompts README updates
@@ -142,6 +147,9 @@ ansible-psirt-swim-demo/
 ├── Settings/
 │   ├── settings.json                   # ★ THE DATA MODEL — the only file you edit for a demo
 │   └── readme.md                       # field-by-field schema reference
+│
+├── reports/                            # CI-committed pipeline evidence + REPORT.md summaries
+│   └── README.md
 │
 └── ansible/
     ├── ansible.cfg                     # inventory path, roles path, vault password file
@@ -163,27 +171,27 @@ ansible-psirt-swim-demo/
     │           └── vault.yml           # (you create — SSH/become creds, gitignored)
     │
     ├── playbooks/
-    │   ├── 01_swim_deploy_http_image_server.yml
-    │   ├── 02_swim_validate_compliance.yml
-    │   ├── 03_swim_import_and_tag.yml
-    │   ├── 04_swim_distribute.yml
-    │   ├── 05_swim_activate.yml
-    │   ├── 06_swim_postcheck.yml
-    │   └── 07_swim_rollback.yml
+    │   ├── 00.1_swim_deploy_image_server.yml
+    │   ├── 00.2_swim_validate_compliance.yml
+    │   ├── 01.1_swim_import_and_tag.yml
+    │   ├── 01.2_swim_distribute.yml
+    │   ├── 01.3_swim_activate.yml
+    │   └── 02.1_swim_rollback.yml
     │
     ├── roles/
     │   ├── swim/tasks/
     │   │   ├── main.yml                # dispatcher — include_tasks "{{ swim_action }}.yml"
     │   │   ├── load_swim_details.yml   # ★ reads settings.json → synthesises swim_details
-    │   │   ├── preflight.yml           # inventory resync + IMAGE compliance baseline
+    │   │   ├── validate_compliance.yml   # pre-upgrade + post-activate compliance modes
+    │   │   ├── build_compliance_site_reports.yml
+    │   │   ├── preflight.yml           # alias → validate_compliance.yml
     │   │   ├── import_and_tag.yml      # remote-URL import + golden tag
     │   │   ├── distribute.yml          # push image to device flash
     │   │   ├── activate.yml            # activate + reload
-    │   │   ├── postcheck.yml           # IMAGE compliance verification
     │   │   ├── rollback.yml            # re-tag + activate previous image (double-gated)
     │   │   └── write_evidence.yml      # dumps per-stage JSON into logs/
     │   │
-    │   └── http_image_server/          # nginx + image staging (stage 01)
+    │   └── http_image_server/          # nginx + image staging (stage 00.1)
     │       ├── defaults/main.yml       # web root, url subdir, rsync retry tuning, manage_ufw
     │       ├── tasks/{preflight,install_nginx,stage_images,configure_nginx,configure_firewall,verify}.yml
     │       ├── templates/swim-images.conf.j2
@@ -287,7 +295,7 @@ Cursor agents in this repo also load `.cursor/rules/readme-sync.mdc` and a
 > **The URL must line up exactly.**
 > `http://{{ image_server_ip }}/{{ image_url_subdir }}/<image>` must equal
 > `swim.image_server_base_url + "/" + swim.upgrade_image`. A mismatch surfaces
-> as an import failure in 03, not in 01.
+> as an import failure in 01.1, not in 00.1.
 
 ---
 
@@ -333,7 +341,7 @@ Responding to an advisory is a **one-line diff** (swap `upgrade_image` to the PS
 +        "upgrade_image": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
 ```
 
-Commit it, run 01 → 06, and the fleet is remediated with evidence attached.
+Commit it, run 00.1 → 01.3, then `00.2 -e post_activate=true`, and the fleet is remediated with evidence attached.
 
 ### Narrowing the blast radius
 
@@ -355,33 +363,37 @@ cd ansible
 source ../.venv/bin/activate
 
 # --- Prep (run once, or whenever the image changes) --------------------------
-ansible-playbook playbooks/01_swim_deploy_http_image_server.yml
+ansible-playbook playbooks/00.1_swim_deploy_image_server.yml
 
 # --- Non-disruptive, safe to run live in front of an audience ----------------
-ansible-playbook playbooks/02_swim_validate_compliance.yml         # baseline: NON_COMPLIANT
-ansible-playbook playbooks/03_swim_import_and_tag.yml    # import + golden tag
-ansible-playbook playbooks/04_swim_distribute.yml        # stage to flash
+ansible-playbook playbooks/00.2_swim_validate_compliance.yml         # baseline: NON_COMPLIANT
+ansible-playbook playbooks/01.1_swim_import_and_tag.yml    # import + golden tag
+ansible-playbook playbooks/01.2_swim_distribute.yml        # stage to flash
 
 # --- Maintenance window only — RELOADS DEVICES ------------------------------
-ansible-playbook playbooks/05_swim_activate.yml
+ansible-playbook playbooks/01.3_swim_activate.yml
 
-# --- Prove it --------------------------------------------------------------
-ansible-playbook playbooks/06_swim_postcheck.yml         # result: COMPLIANT
+# --- Prove it (post-activation; auto-loads pre-upgrade baseline from logs/) ---
+ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e post_activate=true
 ```
 
 ### Useful overrides
 
 ```bash
 # Override image paths without editing vars.yml
-ansible-playbook playbooks/01_swim_deploy_http_image_server.yml \
+ansible-playbook playbooks/00.1_swim_deploy_image_server.yml \
   -e '{"image_local_paths":["/abs/a.SSA.bin","/abs/b.SPA.bin"]}'
 
 # Point at a different data model
-ansible-playbook playbooks/03_swim_import_and_tag.yml \
+ansible-playbook playbooks/01.1_swim_import_and_tag.yml \
   -e settings_json_path=/abs/path/alternate-settings.json
 
+# Pin a specific pre-upgrade baseline when several exist in logs/
+ansible-playbook playbooks/00.2_swim_validate_compliance.yml \
+  -e post_activate=true -e preflight_run_id=20260814-140000
+
 # Verbose role output for a live walkthrough
-ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
+ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 ```
 
 ### Suggested live-demo flow
@@ -389,17 +401,76 @@ ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
 | # | Show | Why it lands |
 |---|---|---|
 | 1 | `Settings/settings.json` side by side with the PSIRT advisory | The advisory maps to one field |
-| 2 | `02` output — IMAGE compliance `NON_COMPLIANT` | Establishes the "before" |
+| 2 | `00.2` output — IMAGE compliance `NON_COMPLIANT` | Establishes the "before" |
 | 3 | The one-line `upgrade_image` diff in git | The change *is* the code review |
-| 4 | `03` + Catalyst Center UI showing the Golden tag appear | Declared intent → API reality |
-| 5 | `04` (non-disruptive) then `05` (the reload) | Separation of staging and risk |
-| 6 | `06` — `COMPLIANT`, plus the JSON evidence files in `logs/` | Auditable outcome, not a screenshot |
+| 4 | `01.1` + Catalyst Center UI showing the Golden tag appear | Declared intent → API reality |
+| 5 | `01.2` (non-disruptive) then `01.3` (the reload) | Separation of staging and risk |
+| 6 | `00.2 -e post_activate=true` — combined pre/post report + evidence in `logs/` | Auditable outcome, not a screenshot |
+
+---
+
+## GitHub Actions (settings.json trigger)
+
+When `Settings/settings.json` changes on `main` or `master`, the
+[SWIM PSIRT Pipeline](.github/workflows/swim-settings-trigger.yml) workflow runs
+automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workflow**).
+
+### Pipeline sequence
+
+| Step | Playbook | Purpose |
+|---|---|---|
+| 1 | `00.2_swim_validate_compliance.yml` | Pre-upgrade IMAGE compliance baseline |
+| 2 | `01.1_swim_import_and_tag.yml` | Import images + golden tag |
+| 3 | `01.2_swim_distribute.yml` | Stage image to device flash |
+| 4 | `01.3_swim_activate.yml` | Activate (reloads devices) |
+| 5 | `00.2_swim_validate_compliance.yml -e post_activate=true` | Post-activation check + pre/post report |
+
+Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`,
+a `REPORT.md` summary is generated, and the workflow commits the results back to the
+repository. See [`reports/README.md`](reports/README.md).
+
+### Runner requirement
+
+The workflow uses a **self-hosted runner** because Catalyst Center and the lab
+network are private (`198.18.x`). Register a runner on a host that can reach CatC
+over HTTPS and can run Ansible.
+
+Install from this repo (creates `.github/actions-runner/`, gitignored):
+
+```bash
+./scripts/setup-actions-runner.sh --start-service
+```
+
+Re-run without `--start-service` to download/configure only; start interactively
+with `cd .github/actions-runner && ./run.sh`, or install the launchd service with
+`./svc.sh install && ./svc.sh start`.
+
+Verify the runner appears under **Settings → Actions → Runners** in GitHub.
+
+> **macOS note:** If the repo lives under `~/Documents`, launchd (`./svc.sh`) is
+> blocked by macOS privacy controls. The setup script falls back to `./run.sh` in
+> the background. For a always-on service, move the repo outside `Documents` or
+> grant Full Disk Access to the runner.
+
+### Required GitHub secrets
+
+| Secret | Description |
+|---|---|
+| `ANSIBLE_VAULT_PASSWORD` | Passphrase used to encrypt `vault.yml` at runtime |
+| `CATC_USERNAME` | Catalyst Center API username |
+| `CATC_PASSWORD` | Catalyst Center API password |
+
+The workflow writes and encrypts `ansible/inventory/group_vars/catalyst_center/vault.yml`
+at runtime — no vault file is committed.
+
+> **Note:** Stage 01.3 reloads devices. Treat every `settings.json` push to the
+> default branch as a production change unless you disable or gate the workflow.
 
 ---
 
 ## How Each Stage Works
 
-Every 01–07 playbook targets the `catalyst_center` group with `connection: local`,
+Playbooks 00.2, 01.1–01.3, and 02.1 target the `catalyst_center` group with `connection: local`,
 loads `vault.yml`, sets a per-run `swim_run_id` timestamp, and imports the `swim`
 role with a specific `tasks_from`.
 
@@ -417,11 +488,11 @@ Imported at the top of every stage. It:
 
 | Key | Consumed by | Contents |
 |---|---|---|
-| `import_images[]` | 03 | Remote-URL import payloads (de-duplicated) |
-| `golden_tag_images[]` | 03, 02, 06 | `tagging_details{image_name, device_role, device_image_family_name, site_name}` |
-| `distribute_images[]` | 04 | `image_distribution_details{...}` |
-| `activate_images[]` | 05 | `image_activation_details{...}` |
-| `rollback_images.tag[]` / `.activate[]` | 07 | Previous-image re-tag + activation |
+| `import_images[]` | 01.1 | Remote-URL import payloads (de-duplicated) |
+| `golden_tag_images[]` | 01.1, 00.2 | `tagging_details{image_name, device_role, device_image_family_name, site_name}` |
+| `distribute_images[]` | 01.2 | `image_distribution_details{...}` |
+| `activate_images[]` | 01.3 | `image_activation_details{...}` |
+| `rollback_images.tag[]` / `.activate[]` | 02.1 | Previous-image re-tag + activation |
 
 Nothing downstream reads `settings.json` directly — this is the single
 translation point from data model to API payload.
@@ -430,13 +501,12 @@ translation point from data model to API payload.
 
 | Stage | Module / action | Notes |
 |---|---|---|
-| 01 | `apt`, `template`, `command` (rsync), `community.general.ufw`, `uri` | Verifies each image with an HTTP HEAD expecting `200` + `application/octet-stream` |
-| 02 | `network_compliance_workflow_manager` | Resyncs inventory per site, then IMAGE compliance. Prints a per-site compliance report as the final task. Read-only. |
-| 03 | `swim_workflow_manager` | Import by URL, then golden tag per family/role/site |
-| 04 | `swim_workflow_manager` | Long-running — governed by `catalystcenter_api_task_timeout` |
-| 05 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate` |
-| 06 | `network_compliance_workflow_manager` | IMAGE compliance per site; compare against the 02 baseline |
-| 07 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true`; honours `activation.*` like stage 05 |
+| 00.1 | `apt`, `template`, `command` (rsync), `community.general.ufw`, `uri` | Verifies each image with an HTTP HEAD expecting `200` + `application/octet-stream` |
+| 00.2 | `network_compliance_workflow_manager` | Default: pre-upgrade baseline → `00_preflight.json`. `-e post_activate=true`: post check + combined pre/post report. |
+| 01.1 | `swim_workflow_manager` | Import by URL, then golden tag per family/role/site |
+| 01.2 | `swim_workflow_manager` | Long-running — governed by `catalystcenter_api_task_timeout` |
+| 01.3 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate` |
+| 02.1 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true`; honours `activation.*` like stage 01.3 |
 
 ---
 
@@ -448,25 +518,27 @@ together:
 
 | File | Stage |
 |---|---|
-| `<run_id>-00_preflight.json` | 02 |
-| `<run_id>-10_import_and_tag.json` | 03 |
-| `<run_id>-20_distribute.json` | 04 |
-| `<run_id>-30_activate.json` | 05 |
-| `<run_id>-35_rollback.json` | 07 |
-| `<run_id>-40_postcheck.json` | 06 |
+| `<run_id>-00_preflight.json` | 00.2 (default) |
+| `<run_id>-00_post_activate.json` | 00.2 (`-e post_activate=true`) |
+| `<run_id>-00_compliance_pre_post.json` | 00.2 (`-e post_activate=true`) |
+| `<run_id>-10_import_and_tag.json` | 01.1 |
+| `<run_id>-20_distribute.json` | 01.2 |
+| `<run_id>-30_activate.json` | 01.3 |
+| `<run_id>-35_rollback.json` | 02.1 |
 
-Diffing `00_preflight` against `40_postcheck` is the change record — this is the
-part that usually replaces a manual screenshot in a change ticket.
+The `00_compliance_pre_post.json` summary and the combined console report are the
+change record — this is the part that usually replaces a manual screenshot in a
+change ticket.
 
 ---
 
 ## Rollback
 
-Stage 07 reloads devices a second time, so it is guarded by two explicit
+Stage 02.1 reloads devices a second time, so it is guarded by two explicit
 confirmation gates that the role asserts before doing anything:
 
 ```bash
-ansible-playbook playbooks/07_swim_rollback.yml \
+ansible-playbook playbooks/02.1_swim_rollback.yml \
   -e rollback_confirm=YES \
   -e rollback_reload_ack=RELOAD_OK
 ```
@@ -475,15 +547,15 @@ Without both, the play fails immediately — a wildcard playbook glob can never
 trigger it by accident.
 
 **Prerequisite:** `rollback_image` must already exist in the Catalyst Center
-repository. Stage 03 imports it alongside `upgrade_image` for exactly this
-reason — do not skip 03 on the assumption that only the new image matters.
+repository. Stage 01.1 imports it alongside `upgrade_image` for exactly this
+reason — do not skip 01.1 on the assumption that only the new image matters.
 
 ---
 
 ## Debug Mode
 
 ```bash
-ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
+ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 ```
 
 | Setting | Effect |
@@ -501,14 +573,15 @@ ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
 |---|---|---|
 | `settings.json must contain a non-empty 'project' list` | Wrong `settings_json_path`, or malformed JSON | Run with `-e catc_debug=true` and check `_resolved_json_path`; validate with `python3 -m json.tool Settings/settings.json` |
 | Each project entry must define a `swim` block | Missing `image_server_base_url` or `upgrade_image` | Add both to every `project[]` entry — SWIM validates all entries, not just the first |
-| 01 HTTP HEAD verification fails | nginx not serving, ufw blocking, or image not staged | `curl -I http://<image_server_ip>/images/<file>.bin` from the control node |
-| 03 import fails / times out | Catalyst Center cannot reach the image server | Confirm CatC → image server TCP/80 reachability; the URL must be resolvable *from CatC*, not from your laptop |
-| Golden tag applied but 04 finds no devices | Devices not assigned to the site, or `device_role` too narrow | Verify site assignment in CatC inventory; try `device_role: "ALL"` |
-| 04 / 05 times out | Large image over a slow link | Raise `catalystcenter_api_task_timeout` (default 3600s) |
-| `sshpass: command not found` in 01 | Password SSH auth without sshpass | `brew install sshpass`, or switch the image server to SSH keys and drop `ansible_ssh_pass` |
+| 00.1 HTTP HEAD verification fails | nginx not serving, ufw blocking, or image not staged | `curl -I http://<image_server_ip>/images/<file>.bin` from the control node |
+| 01.1 import fails / times out | Catalyst Center cannot reach the image server | Confirm CatC → image server TCP/80 reachability; the URL must be resolvable *from CatC*, not from your laptop |
+| Golden tag applied but 01.2 finds no devices | Devices not assigned to the site, or `device_role` too narrow | Verify site assignment in CatC inventory; try `device_role: "ALL"` |
+| 01.2 / 01.3 times out | Large image over a slow link | Raise `catalystcenter_api_task_timeout` (default 3600s) |
+| `sshpass: command not found` in 00.1 | Password SSH auth without sshpass | `brew install sshpass`, or switch the image server to SSH keys and drop `ansible_ssh_pass` |
 | `Attempting to decrypt but no vault secrets found` | `.vault_pass` missing or unreadable | Recreate it at the repo root; `ansible.cfg` points at `../.vault_pass` |
-| rsync restarts repeatedly in 01 | Low-MTU VPN path | Expected — the role retries with resume. Tune `image_rsync_retries` / `image_rsync_timeout`. |
-| 06 still reports `NON_COMPLIANT` | Devices not fully back online after reload | Wait for inventory resync, then re-run 06 |
+| rsync restarts repeatedly in 00.1 | Low-MTU VPN path | Expected — the role retries with resume. Tune `image_rsync_retries` / `image_rsync_timeout`. |
+| Post-activation 00.2 still reports `NON_COMPLIANT` | Devices not fully back online after reload | Wait for inventory to settle, then re-run with `-e post_activate=true` |
+| `No pre-upgrade baseline found in logs/` | post_activate run before a default 00.2 | Run 00.2 without extra-vars first, or pass `-e preflight_run_id=<run_id>` |
 
 ---
 
@@ -523,7 +596,7 @@ ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
 - `catalystcenter_verify: false` is appropriate for a self-signed lab
   controller. Set it to `true` and trust the CA before using this against
   anything production.
-- Stages 05 and 07 reload devices. 07 is double-gated; 05 deliberately
+- Stages 01.3 and 02.1 reload devices. 02.1 is double-gated; 01.3 deliberately
   is not, because it is the intended outcome of the pipeline — schedule it.
 
 ---

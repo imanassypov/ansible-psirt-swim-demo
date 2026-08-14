@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# swim / distribute.yml  —  Stage 04: push image to devices per site/role
+# swim / distribute.yml  —  Stage 01.2: push image to devices per site/role
 # =============================================================================
 # Pre:  swim_details.distribute_images (image imported + tagged in prior step)
 # Post: distribution tasks submitted to CatC SWIM workflow manager

@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# swim / build_compliance_site_reports.yml
+# =============================================================================
+# Parses network_compliance_workflow_manager loop register into site reports.
+#
+# Required vars:
+#   compliance_register — ansible register from the compliance loop
+#
+# Sets:
+#   compliance_site_reports — list of per-site dicts (site, totals, devices[])
+# =============================================================================
+
+- name: Build IMAGE compliance site reports from register
+  vars:
+    compliance_results: "{{ compliance_register.results | default([]) }}"
+    _site_reports_json: >-
+      {% set reports = [] %}
+      {% for site in compliance_results %}
+      {% set site_name = site.item %}
+      {% set devices = [] %}
+      {% if site.response is mapping %}
+      {% for dev in site.response | dict2items %}
+      {% set rec = dev.value | first | default({}) %}
+      {% set diff = (rec.sourceInfoList | default([]) | first | default({})).diffList | default([]) | first | default({}) %}
+      {% set _ = devices.append({
+        'device': dev.key,
+        'status': rec.status | default('UNKNOWN'),
+        'configured_image': diff.configuredValue | default('n/a'),
+        'intended_image': diff.intendedValue | default('n/a')
+      }) %}
+      {% endfor %}
+      {% endif %}
+      {% set summary = site.msg if site.msg is mapping else {} %}
+      {% set success_msg = summary.get('Run Compliance Check Succeeded for following device(s)', {}) %}
+      {% set skipped_msg = summary.get('Run Compliance Check Skipped for following device(s)', {}) %}
+      {% set _ = reports.append({
+        'site': site_name,
+        'task_failed': site.failed | default(false),
+        'compliant': success_msg.get('Compliant Devices', 0),
+        'non_compliant': success_msg.get('Non-Compliant Devices', 0),
+        'total_checked': success_msg.get('Total Devices Checked', 0),
+        'skipped_devices': skipped_msg.get('skipped_devices', []),
+        'devices': devices
+      }) %}
+      {% endfor %}
+      {{ reports | to_json }}
+  ansible.builtin.set_fact:
+    compliance_site_reports: "{{ _site_reports_json | from_json }}"

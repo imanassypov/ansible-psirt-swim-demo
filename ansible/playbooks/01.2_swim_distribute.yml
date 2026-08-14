@@ -1,12 +1,12 @@
 ---
 # =============================================================================
-# 04_swim_distribute.yml  —  Pipeline stage 04 (SWIM lifecycle)
+# 01.2_swim_distribute.yml  —  Pipeline stage 01.2 (SWIM lifecycle)
 # =============================================================================
 # Copies the golden image onto each target device's flash and waits for the
 # distribution task to complete. Role: swim, tasks_from: distribute.
 #
 # Non-disruptive — the running image is unchanged; only flash is written.
-# Run this well ahead of the maintenance window so 05 is a fast reload.
+# Run this well ahead of the maintenance window so 01.3 is a fast reload.
 #
 # Sourced:
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
@@ -21,10 +21,10 @@
 #   On devices: the golden image staged in flash.
 #   Evidence file: ../logs/{{ swim_run_id }}-20_distribute.json
 #
-# Depends on: stage 03 (image imported and tagged Golden)
+# Depends on: stage 01.1 (image imported and tagged Golden)
 # Module: cisco.catalystcenter.swim_workflow_manager
 #
-# Run: ansible-playbook playbooks/04_swim_distribute.yml
+# Run: ansible-playbook playbooks/01.2_swim_distribute.yml
 # =============================================================================
 - name: Distribute golden image to targets
   hosts: catalyst_center

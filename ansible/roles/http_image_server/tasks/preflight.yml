@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# http_image_server / preflight.yml  —  Stage 01: validate inputs
+# http_image_server / preflight.yml  —  Stage 00.1: validate inputs
 # =============================================================================
 # Fails fast before anything is installed or transferred: confirms the operator
 # actually set image_local_paths, and records which of those files exist on the

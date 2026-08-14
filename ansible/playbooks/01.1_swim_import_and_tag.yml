@@ -1,17 +1,17 @@
 ---
 # =============================================================================
-# 03_swim_import_and_tag.yml  —  Pipeline stage 03 (SWIM lifecycle)
+# 01.1_swim_import_and_tag.yml  —  Pipeline stage 01.1 (SWIM lifecycle)
 # =============================================================================
 # Imports IOS-XE images into the Catalyst Center repository over HTTP from the
-# server built in 01, then marks the upgrade image as Golden for the target
+# server built in 00.1, then marks the upgrade image as Golden for the target
 # device family/role at each site. Role: swim, tasks_from: import_and_tag.
 #
 # Non-destructive — no device is touched; this only populates the CatC image
-# repository and sets the golden tag that 04/05 act on.
+# repository and sets the golden tag that 01.2/01.3 act on.
 #
 # Sourced:
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
-#     image_server_base_url    — must match what 01 actually serves
+#     image_server_base_url    — must match what 00.1 actually serves
 #     upgrade_image            — .bin filename to import and tag golden
 #     device_family_identifier / device_family_name / device_series_name
 #     device_role              — ALL | CORE | DISTRIBUTION | ACCESS | BORDER ROUTER
@@ -27,10 +27,10 @@
 #   Golden for the specified family/role/site.
 #   Evidence file: ../logs/{{ swim_run_id }}-10_import_and_tag.json
 #
-# Depends on: stage 01 (images reachable by URL), stage 05 (site membership)
+# Depends on: stage 00.1 (images reachable by URL), devices assigned to sites
 # Module: cisco.catalystcenter.swim_workflow_manager
 #
-# Run: ansible-playbook playbooks/03_swim_import_and_tag.yml
+# Run: ansible-playbook playbooks/01.1_swim_import_and_tag.yml
 # =============================================================================
 - name: Import IOS-XE images and tag golden
   hosts: catalyst_center

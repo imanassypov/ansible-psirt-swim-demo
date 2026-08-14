@@ -16,3 +16,6 @@ ansible/.ansible/
 .venv/
 __pycache__/
 .DS_Store
+
+# Self-hosted GitHub Actions runner (local install — never commit)
+.github/actions-runner/

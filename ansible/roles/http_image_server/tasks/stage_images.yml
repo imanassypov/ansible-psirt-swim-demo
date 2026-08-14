@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# http_image_server / stage_images.yml  —  Stage 01 (A.2): transfer images
+# http_image_server / stage_images.yml  —  Stage 00.1 (A.2): transfer images
 # =============================================================================
 # Uploads any image that is missing on the target, skipping those already
 # present. Transfers are resumable, because a single IOS-XE .bin is ~1.3 GB and

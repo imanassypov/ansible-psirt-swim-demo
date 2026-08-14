@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# 05_swim_activate.yml  —  Pipeline stage 05 (SWIM lifecycle)  *DISRUPTIVE*
+# 01.3_swim_activate.yml  —  Pipeline stage 01.3 (SWIM lifecycle)  *DISRUPTIVE*
 # =============================================================================
 # Activates the golden image on the target devices. THIS RELOADS DEVICES — run
 # only inside an approved maintenance window. Role: swim, tasks_from: activate.
@@ -21,12 +21,12 @@
 #   On devices: reload and boot into the golden image per device_upgrade_mode.
 #   Evidence file: ../logs/{{ swim_run_id }}-30_activate.json
 #
-# Depends on: stage 04 (image staged in flash — or distribute_if_needed=true)
-# Follow with: 06_swim_postcheck.yml to confirm IMAGE compliance
-# Recovery:    07_swim_rollback.yml
+# Depends on: stage 01.2 (image staged in flash — or distribute_if_needed=true)
+# Follow with: 00.2_swim_validate_compliance.yml -e post_activate=true
+# Recovery:    02.1_swim_rollback.yml
 # Module: cisco.catalystcenter.swim_workflow_manager
 #
-# Run: ansible-playbook playbooks/05_swim_activate.yml
+# Run: ansible-playbook playbooks/01.3_swim_activate.yml
 # =============================================================================
 - name: Activate image on targets (reloads devices)
   hosts: catalyst_center

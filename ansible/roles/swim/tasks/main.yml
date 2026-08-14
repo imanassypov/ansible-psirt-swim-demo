@@ -2,9 +2,10 @@
 # =============================================================================
 # swim / main.yml
 # =============================================================================
-# Stub entry — playbooks 01_swim_*.yml through 07_swim_*.yml invoke action task files directly via
-# import_role tasks_from: preflight | import_and_tag | distribute | activate |
-#                         rollback | postcheck
+# Stub entry — playbooks 00.1_swim_deploy_image_server.yml, 00.2_swim_validate_compliance.yml,
+# 01.1–01.3_swim_*.yml, and 02.1_swim_rollback.yml invoke action task files directly via
+# import_role tasks_from: validate_compliance | import_and_tag | distribute | activate |
+#                         rollback
 # =============================================================================
 
 - name: Dispatch SWIM action

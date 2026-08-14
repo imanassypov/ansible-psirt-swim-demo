@@ -1,10 +1,10 @@
 ---
 # =============================================================================
-# 01_swim_deploy_http_image_server.yml  —  Pipeline stage 01 (SWIM prereq)
+# 00.1_swim_deploy_image_server.yml  —  Pipeline stage 00.1 (SWIM prereq)
 # =============================================================================
 # Stands up an nginx image-distribution server on an Ubuntu host and stages the
 # IOS-XE .bin images onto it, so Catalyst Center can pull them by URL in stage
-# 03 instead of uploading them through the browser. Role: http_image_server.
+# 01.1 instead of uploading them through the browser. Role: http_image_server.
 #
 # Serves:  http://{{ image_server_ip }}/{{ image_url_subdir }}/<image_filename>
 # This URL must match settings.json swim.image_server_base_url exactly.
@@ -26,10 +26,10 @@
 #   --rsync-path="sudo rsync"`, resumable), ufw allowing TCP/80.
 #   Verified by an HTTP HEAD returning 200 + application/octet-stream per image.
 #
-# Run: ansible-playbook playbooks/01_swim_deploy_http_image_server.yml
+# Run: ansible-playbook playbooks/00.1_swim_deploy_image_server.yml
 #
 # Override image paths at runtime:
-#   ansible-playbook playbooks/01_swim_deploy_http_image_server.yml \
+#   ansible-playbook playbooks/00.1_swim_deploy_image_server.yml \
 #     -e '{"image_local_paths":["/abs/a.SSA.bin","/abs/b.SPA.bin"]}'
 # =============================================================================
 - name: Deploy HTTP image-distribution server for Catalyst Center SWIM

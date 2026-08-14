@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# 07_swim_rollback.yml  —  Pipeline stage 07 (SWIM recovery)  *DISRUPTIVE*
+# 02.1_swim_rollback.yml  —  Pipeline stage 02.1 (SWIM recovery)  *DISRUPTIVE*
 # =============================================================================
 # Emergency recovery from a failed upgrade: re-tags the previous image as
 # Golden and activates it, RELOADING the devices a second time.
@@ -27,9 +27,9 @@
 #   Evidence file: ../logs/{{ swim_run_id }}-35_rollback.json
 #
 # Prerequisite: rollback_image must already exist in the CatC repository
-#               (imported alongside upgrade_image in stage 03)
+#               (imported alongside upgrade_image in stage 01.1)
 #
-# Run: ansible-playbook playbooks/07_swim_rollback.yml \
+# Run: ansible-playbook playbooks/02.1_swim_rollback.yml \
 #        -e rollback_confirm=YES -e rollback_reload_ack=RELOAD_OK
 # =============================================================================
 - name: Roll back to previous golden image (reloads devices)

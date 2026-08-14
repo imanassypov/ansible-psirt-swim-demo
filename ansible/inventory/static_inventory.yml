@@ -1,7 +1,7 @@
 ---
 # Static inventory for the SWIM demo.
 #   catalyst_center — API target (all work runs locally against the CatC REST API)
-#   image_servers   — Ubuntu host that serves the .bin images over HTTP (stage 01)
+#   image_servers   — Ubuntu host that serves the .bin images over HTTP (stage 00.1)
 #
 # Host names differ from group names, otherwise Ansible warns
 # "Found both group and host with same name". Playbooks target the group.

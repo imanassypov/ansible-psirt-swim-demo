@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# http_image_server / install_nginx.yml  —  Stage 01 (A.1): install web server
+# http_image_server / install_nginx.yml  —  Stage 00.1 (A.1): install web server
 # =============================================================================
 # Installs nginx and creates the image web root. Runs before stage_images.yml
 # so the destination directory exists and is owned by www-data before rsync
@@ -8,7 +8,7 @@
 #
 # Pre:  image_dir — "{{ image_web_root }}/{{ image_url_subdir }}",
 #                   defaults to /var/www/html/images
-#       become: true (set at play level in 01_swim_deploy_http_image_server.yml)
+#       become: true (set at play level in 00.1_swim_deploy_image_server.yml)
 #
 # Post: nginx_binary     — stat of /usr/sbin/nginx, gates the install path
 #       apt_cache_update — registered but never fails the play
