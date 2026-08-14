@@ -1,0 +1,32 @@
+---
+# =============================================================================
+# swim / poll_site_reachability_once.yml — single reachability poll iteration
+# =============================================================================
+# Sets swim_reachability_all_ready (bool) and swim_reachability_pending (IPs).
+# Eligibility matches network_compliance_workflow_manager:
+#   Reachable + collectionStatus in [Managed, In Progress], not Unified AP.
+# =============================================================================
+
+- name: Initialise reachability poll accumulators
+  ansible.builtin.set_fact:
+    _reachability_pending_ips: []
+    _reachability_checked_sites: 0
+
+- name: Assess device reachability per target site
+  ansible.builtin.include_tasks: assess_site_reachability.yml
+  loop: "{{ swim_target_sites }}"
+  loop_control:
+    loop_var: reachability_site_name
+    label: "{{ reachability_site_name }}"
+
+- name: Update reachability poll status
+  ansible.builtin.set_fact:
+    swim_reachability_all_ready: "{{ _reachability_pending_ips | length == 0 }}"
+    swim_reachability_pending: "{{ _reachability_pending_ips | unique | list }}"
+
+- name: "DEBUG | Reachability poll status"
+  ansible.builtin.debug:
+    msg:
+      all_ready: "{{ swim_reachability_all_ready }}"
+      pending: "{{ swim_reachability_pending }}"
+  when: catc_debug | default(false) | bool

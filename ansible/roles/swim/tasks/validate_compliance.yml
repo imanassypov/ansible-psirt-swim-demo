@@ -5,9 +5,9 @@
 # Modes (set via extra-var post_activate):
 #   default (post_activate=false): pre-upgrade baseline — resync, IMAGE compliance,
 #                                  evidence to 00_preflight.json, pre-upgrade report.
-#   post_activate=true:            post-activation check — resync, IMAGE compliance,
-#                                  load latest pre-upgrade baseline from logs/,
-#                                  combined pre/post report + 00_post_activate.json.
+#   post_activate=true:            post-activation check — poll reachability,
+#                                  resync, IMAGE compliance, load pre-upgrade
+#                                  baseline from logs/, combined pre/post report.
 #
 # Optional: preflight_run_id=<YYYYmmdd-HHMMSS> pins the pre-upgrade baseline file
 #           instead of auto-selecting the newest *-00_preflight.json.
@@ -28,6 +28,10 @@
       {{ swim_details.golden_tag_images
          | map(attribute='tagging_details.site_name')
          | unique | list }}
+
+- name: Wait for site device reachability before post-activate compliance
+  ansible.builtin.import_tasks: wait_for_site_reachability.yml
+  when: swim_validate_post_activate | bool
 
 - name: Resync devices at target sites to refresh inventory state
   cisco.catalystcenter.inventory_workflow_manager:

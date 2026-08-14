@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# swim / assess_site_reachability.yml — check one site (reachability_site_name)
+# =============================================================================
+
+- name: Resolve site UUID for reachability poll
+  cisco.catalystcenter.sites_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    catalystcenter_log: "{{ catalystcenter_log }}"
+    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
+    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
+    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    nameHierarchy: "{{ reachability_site_name }}"
+  register: reachability_site_lookup
+
+- name: Require site for reachability poll
+  ansible.builtin.assert:
+    that:
+      - reachability_site_lookup.catalystcenter_response.response is defined
+      - reachability_site_lookup.catalystcenter_response.response | length > 0
+    fail_msg: "Site '{{ reachability_site_name }}' not found in Catalyst Center during reachability poll."
+
+- name: List devices assigned to site
+  cisco.catalystcenter.network_devices_assigned_to_site_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    catalystcenter_log: "{{ catalystcenter_log }}"
+    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
+    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
+    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    siteId: "{{ reachability_site_lookup.catalystcenter_response.response[0].id }}"
+    offset: 1
+    limit: 500
+  register: reachability_site_devices
+
+- name: Build assigned device id list
+  ansible.builtin.set_fact:
+    _reachability_device_ids: >-
+      {{ reachability_site_devices.catalystcenter_response.response
+         | default([])
+         | map(attribute='deviceId')
+         | list }}
+
+- name: Fetch device inventory state
+  cisco.catalystcenter.network_device_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    catalystcenter_log: "{{ catalystcenter_log }}"
+    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
+    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
+    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    id: "{{ item }}"
+  loop: "{{ _reachability_device_ids }}"
+  loop_control:
+    label: "{{ item }}"
+  register: reachability_device_states
+  when: _reachability_device_ids | length > 0
+
+- name: Accumulate devices not yet reachable/managed
+  vars:
+    _device: "{{ item.catalystcenter_response.response | default({}) }}"
+    _device_ip: "{{ _device.managementIpAddress | default(_device.hostname | default('unknown')) }}"
+    _device_ready: >-
+      {{
+        (_device.family | default('') != 'Unified AP')
+        and (_device.reachabilityStatus | default('') == 'Reachable')
+        and (_device.collectionStatus | default('') in ['Managed', 'In Progress'])
+      }}
+  ansible.builtin.set_fact:
+    _reachability_pending_ips: >-
+      {{ _reachability_pending_ips + ([] if _device_ready else [_device_ip]) }}
+  loop: "{{ reachability_device_states.results | default([]) }}"
+  loop_control:
+    label: "{{ _device_ip }}"
+  when:
+    - _reachability_device_ids | length > 0
+    - item.catalystcenter_response.response is defined
+    - not item.skipped | default(false)

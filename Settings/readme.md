@@ -36,6 +36,9 @@ hardcoded in a playbook or role).
 | `activation.schedule_validate` | bool | Run CatC pre-activation validation before reload. Applied to upgrade (01.3) and rollback (02.1). |
 | `activation.image_activation_timeout` | int | Seconds to wait for activation/reload to complete (default 3600). Applied to upgrade (01.3) and rollback (02.1). |
 | `activation.image_distribution_timeout` | int | Seconds to wait for image distribution to complete (default 3600). Applied to distribute (01.2). |
+| `activation.wait_for_reachability` | bool | Post-activate only (`00.2 -e post_activate=true`): poll CatC until site devices are Reachable + Managed/In Progress before compliance (default true). |
+| `activation.reachability_poll_interval` | int | Seconds between reachability polls (default 60). |
+| `activation.reachability_poll_timeout` | int | Max seconds to wait for reachability before failing post-activate (default 600). |
 
 ## Derived site path
 

@@ -1,0 +1,47 @@
+---
+# =============================================================================
+# swim / wait_for_site_reachability.yml — post-activate reachability gate
+# =============================================================================
+# Polls Catalyst Center until site-assigned devices are Reachable and Managed
+# (or In Progress) before resync + IMAGE compliance. Reduces skipped_devices
+# after activation reloads.
+# =============================================================================
+
+- name: Skip reachability wait when disabled in settings
+  when: not (swim_details.reachability.enabled | default(true) | bool)
+  ansible.builtin.set_fact:
+    swim_reachability_all_ready: true
+    swim_reachability_pending: []
+
+- name: Poll device reachability before post-activate compliance
+  when: swim_details.reachability.enabled | default(true) | bool
+  block:
+    - name: Compute reachability poll retries
+      ansible.builtin.set_fact:
+        _reachability_poll_interval: "{{ swim_details.reachability.poll_interval | default(60) | int }}"
+        _reachability_poll_timeout: "{{ swim_details.reachability.poll_timeout | default(600) | int }}"
+        _reachability_poll_retries: >-
+          {{ (
+               (_reachability_poll_timeout | int)
+               // (_reachability_poll_interval | int)
+             ) - 1 }}
+
+    - name: Wait for all target site devices to become reachable
+      ansible.builtin.include_tasks: poll_site_reachability_once.yml
+      until: swim_reachability_all_ready | default(false) | bool
+      retries: "{{ [_reachability_poll_retries | int, 0] | max }}"
+      delay: "{{ _reachability_poll_interval }}"
+
+    - name: Fail when devices remain unreachable after poll timeout
+      ansible.builtin.fail:
+        msg: >-
+          Post-activate reachability poll timed out after {{ _reachability_poll_timeout }}s.
+          Devices still not Reachable + Managed/In Progress:
+          {{ swim_reachability_pending | join(', ') }}.
+          Check Catalyst Center inventory or raise activation.reachability_poll_timeout in settings.json.
+      when: not swim_reachability_all_ready | default(false) | bool
+
+    - name: Reachability poll succeeded
+      ansible.builtin.debug:
+        msg: "All site-assigned devices are Reachable and Managed/In Progress — proceeding to post-activate compliance."
+      when: swim_reachability_all_ready | default(false) | bool

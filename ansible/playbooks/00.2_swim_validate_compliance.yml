@@ -9,7 +9,7 @@
 #     logs/<run_id>-00_preflight.json, print pre-upgrade report.
 #
 #   Post-activation (-e post_activate=true):
-#     Post-upgrade check — resync, run IMAGE compliance, load the pre-upgrade
+#     Poll reachability, post-upgrade resync + IMAGE compliance, load the pre-upgrade
 #     baseline from logs/ (newest *-00_preflight.json, or -e preflight_run_id=),
 #     print combined pre/post report and write:
 #       logs/<run_id>-00_post_activate.json

@@ -169,7 +169,10 @@
               'distribute_if_needed':      (sw.activation | default({})).distribute_if_needed | default(true),
               'schedule_validate':            (sw.activation | default({})).schedule_validate | default(false),
               'image_activation_timeout':     (sw.activation | default({})).image_activation_timeout | default(3600),
-              'image_distribution_timeout':   (sw.activation | default({})).image_distribution_timeout | default(3600)
+              'image_distribution_timeout':   (sw.activation | default({})).image_distribution_timeout | default(3600),
+              'wait_for_reachability':        (sw.activation | default({})).wait_for_reachability | default(true),
+              'reachability_poll_interval':   (sw.activation | default({})).reachability_poll_interval | default(60),
+              'reachability_poll_timeout':    (sw.activation | default({})).reachability_poll_timeout | default(600)
             } -%}
         {%- set ns.items = ns.items + [rec] -%}
       {%- endfor -%}
@@ -414,6 +417,10 @@
             {%- endif -%}
           {%- endfor -%}
           {{ ns.items }}
+      reachability:
+        enabled: "{{ _swim_records[0].wait_for_reachability | default(true) }}"
+        poll_interval: "{{ _swim_records[0].reachability_poll_interval | default(60) | int }}"
+        poll_timeout: "{{ _swim_records[0].reachability_poll_timeout | default(600) | int }}"
 
 - name: "DEBUG | Synthesised swim_details"
   ansible.builtin.debug:

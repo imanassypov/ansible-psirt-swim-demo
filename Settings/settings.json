@@ -18,7 +18,10 @@
                     "distribute_if_needed": true,
                     "schedule_validate": false,
                     "image_activation_timeout": 3600,
-                    "image_distribution_timeout": 3600
+                    "image_distribution_timeout": 3600,
+                    "wait_for_reachability": true,
+                    "reachability_poll_interval": 60,
+                    "reachability_poll_timeout": 600
                 }
             }
         }
