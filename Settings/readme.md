@@ -29,7 +29,7 @@ or role).
 | `device_family_name` | string | CatC *device* family used for distribute/activate targeting (e.g. `Switches and Hubs`). |
 | `device_series_name` | string | CatC device series used for distribute/activate targeting. |
 | `device_role` | string | `ALL` \| `CORE` \| `DISTRIBUTION` \| `ACCESS` \| `BORDER ROUTER`. Narrows the blast radius. |
-| `upgrade_image` | string | `.bin` filename to import, tag Golden, distribute and activate. This is the PSIRT-remediating image. |
+| `upgrade_image` | string | `.bin` filename to import, tag Golden, distribute and activate. Set to the PSIRT-remediating image when responding to an advisory (default in repo: `cat9kv-universalk9.17.15.03.SPA.bin`; example fix build: `cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin`). |
 | `rollback_image` | string | Known-good `.bin` to return to in stage 07. Imported alongside `upgrade_image` in 03. Set to `""` to disable rollback. |
 | `activation.device_upgrade_mode` | string | `install` (recommended) or `bundle`. |
 | `activation.distribute_if_needed` | bool | Auto-distribute during activation when flash lacks the image. |

@@ -309,7 +309,7 @@ Cursor agents in this repo also load `.cursor/rules/readme-sync.mdc` and a
         "device_family_name":       "Switches and Hubs",
         "device_series_name":       "Cisco Catalyst 9000 Series Virtual Switches",
         "device_role":              "ALL",
-        "upgrade_image":            "cat9kv-universalk9.BLD_V262_....SSA.bin",
+        "upgrade_image":            "cat9kv-universalk9.17.15.03.SPA.bin",
         "rollback_image":           "cat9kv-universalk9.17.15.03.SPA.bin",
         "activation": {
           "device_upgrade_mode":  "install",
@@ -326,11 +326,11 @@ Full field reference: [`Settings/readme.md`](Settings/readme.md).
 
 ### The PSIRT moment
 
-Responding to an advisory is a **one-line diff**:
+Responding to an advisory is a **one-line diff** (swap `upgrade_image` to the PSIRT-remediating build, for example `cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin`):
 
 ```diff
 -        "upgrade_image": "cat9kv-universalk9.17.15.03.SPA.bin",
-+        "upgrade_image": "cat9kv-universalk9.17.15.04a.SPA.bin",
++        "upgrade_image": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
 ```
 
 Commit it, run 01 → 06, and the fleet is remediated with evidence attached.
