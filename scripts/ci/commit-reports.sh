@@ -25,5 +25,9 @@ Commit: ${GITHUB_SHA}
 EOF
 )"
 
-git push
+if [[ "$(git rev-parse --abbrev-ref HEAD)" == "HEAD" ]]; then
+  git checkout -q master
+fi
+
+git push origin HEAD:master
 ci_log "Reports committed and pushed for workflow run ${GITHUB_RUN_NUMBER}."

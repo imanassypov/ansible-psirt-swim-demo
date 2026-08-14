@@ -1,2 +1,3 @@
 # Ansible control-node requirements for the SWIM / PSIRT remediation demo.
 ansible-core>=2.17,<2.18
+catalystcentersdk

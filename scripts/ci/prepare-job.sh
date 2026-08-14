@@ -8,21 +8,6 @@ source "${SCRIPT_DIR}/lib/log.sh"
 
 ci_cd_lab
 
-resolve_ansible_playbook() {
-  if [[ -x "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook" ]]; then
-    printf '%s\n' "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook"
-    return 0
-  fi
-  if command -v ansible-playbook >/dev/null 2>&1; then
-    ci_log "NOTE: Using ansible-playbook from PATH (install into .venv for reproducible CI)."
-    command -v ansible-playbook
-    return 0
-  fi
-  ci_log "ERROR: ansible-playbook not found in .venv or PATH."
-  ci_log "Complete Installation (README) before running CI."
-  exit 1
-}
-
 for path in \
   ".vault_pass" \
   "ansible/inventory/group_vars/catalyst_center/vault.yml"; do
@@ -34,17 +19,21 @@ for path in \
 done
 
 git fetch -q origin master
-git checkout -q -f "${GITHUB_SHA}"
+git checkout -q master
+git reset --hard "${GITHUB_SHA}"
 
-ANSIBLE_PLAYBOOK="$(resolve_ansible_playbook)"
+ci_activate_lab_env
+if [[ -z "${ANSIBLE_PLAYBOOK:-}" ]]; then
+  ci_log "ERROR: ansible-playbook not found in .venv or PATH."
+  ci_log "Complete Installation (README) before running CI."
+  exit 1
+fi
 
-{
-  echo "ANSIBLE_PLAYBOOK=${ANSIBLE_PLAYBOOK}"
-  if [[ -d "${SWIM_LAB_ROOT}/.venv" ]]; then
-    echo "VIRTUAL_ENV=${SWIM_LAB_ROOT}/.venv"
-    echo "PATH=${SWIM_LAB_ROOT}/.venv/bin:${PATH}"
-  fi
-} >> "${GITHUB_ENV}"
+if ! python -c "import catalystcentersdk" 2>/dev/null; then
+  ci_log "ERROR: catalystcentersdk is not installed in .venv."
+  ci_log "Run: pip install -r requirements-ansible.txt"
+  exit 1
+fi
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "start_epoch=$(date +%s)" >> "${GITHUB_OUTPUT}"

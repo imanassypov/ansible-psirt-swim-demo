@@ -44,6 +44,21 @@ ci_cd_lab() {
   cd "${SWIM_LAB_ROOT}"
 }
 
+ci_activate_lab_env() {
+  ci_require_lab_root
+  if [[ -d "${SWIM_LAB_ROOT}/.venv" ]]; then
+    export VIRTUAL_ENV="${SWIM_LAB_ROOT}/.venv"
+    export PATH="${SWIM_LAB_ROOT}/.venv/bin:${PATH}"
+  fi
+  if [[ -z "${ANSIBLE_PLAYBOOK:-}" ]]; then
+    if [[ -x "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook" ]]; then
+      export ANSIBLE_PLAYBOOK="${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook"
+    elif command -v ansible-playbook >/dev/null 2>&1; then
+      export ANSIBLE_PLAYBOOK="$(command -v ansible-playbook)"
+    fi
+  fi
+}
+
 # Pipe-friendly filter for command output (e.g. ansible-playbook).
 ci_redact_stream() {
   while IFS= read -r line || [[ -n "$line" ]]; do

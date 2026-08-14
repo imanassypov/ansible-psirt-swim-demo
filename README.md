@@ -109,6 +109,7 @@ Note the image transfer direction: **Catalyst Center pulls from nginx.** Stage
 |---|---|
 | Python | 3.9+ on the control node |
 | `ansible-core` | `>=2.17,<2.18` (see `requirements-ansible.txt`) |
+| `catalystcentersdk` | Python SDK required by the `cisco.catalystcenter` collection (installed via `requirements-ansible.txt`) |
 | `cisco.catalystcenter` collection | `2.9.0` |
 | `community.general` collection | `>=8.0.0,<11.0.0` (provides `ufw`) |
 | Cisco Catalyst Center | 2.3.7.9 (API version pinned in `connection.yml`) |

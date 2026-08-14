@@ -7,17 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/log.sh"
 
 ci_cd_lab
+ci_activate_lab_env
 cd ansible
 
 if [[ -z "${ANSIBLE_PLAYBOOK:-}" ]]; then
-  if [[ -x "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook" ]]; then
-    ANSIBLE_PLAYBOOK="${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook"
-  elif command -v ansible-playbook >/dev/null 2>&1; then
-    ANSIBLE_PLAYBOOK="$(command -v ansible-playbook)"
-  else
-    ci_log "ERROR: ansible-playbook not found (run Prepare lab job first)."
-    exit 1
-  fi
+  ci_log "ERROR: ansible-playbook not found (run Prepare lab job first)."
+  exit 1
 fi
 
 _run_playbook() {
