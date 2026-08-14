@@ -6,11 +6,14 @@
 # Non-secret but host-specific
 ansible/inventory/group_vars/image_servers/vars.yml
 
-# Runtime artifacts
-ansible/logs/*
+# Runtime logs and local evidence (SWIM / CatC)
+ansible/logs/
 !ansible/logs/.gitkeep
-ansible/.ansible/
+logs/
 *.log
+
+# Ansible local state
+ansible/.ansible/
 
 # Python / OS
 .venv/
