@@ -284,8 +284,9 @@
 #                  "device_family_name":           "Switches and Hubs",
 #                  "device_series_name":           "Cisco Catalyst 9000 Series Virtual Switches",
 #                  "activate_lower_image_version": true,
+#                  "device_upgrade_mode":          "install",
 #                  "distribute_if_needed":         true,
-#                  "schedule_validate":            true
+#                  "schedule_validate":            false
 #                }
 #              }
 #            ]
@@ -400,8 +401,9 @@
                       'device_family_name': r.family_name,
                       'device_series_name': r.series_name,
                       'activate_lower_image_version': true,
+                      'device_upgrade_mode': r.device_upgrade_mode,
                       'distribute_if_needed': r.distribute_if_needed,
-                      'schedule_validate': true
+                      'schedule_validate': r.schedule_validate
                     }
                   }] -%}
             {%- endif -%}

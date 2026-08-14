@@ -16,7 +16,7 @@
                 "activation": {
                     "device_upgrade_mode": "install",
                     "distribute_if_needed": true,
-                    "schedule_validate": false
+                    "schedule_validate": true
                 }
             }
         }

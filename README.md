@@ -59,7 +59,7 @@ The point of the demo: **the advisory response becomes a code change**
 | Stage | Playbook | Disruptive? | Purpose |
 |---|---|---|---|
 | 01 | `01_swim_deploy_http_image_server.yml` | No | Stands up nginx on an Ubuntu host and stages the `.bin` images so CatC can pull them by URL. |
-| 02 | `02_swim_preflight.yml` | No | Resyncs inventory at each target site and captures the **pre-upgrade IMAGE compliance baseline**. |
+| 02 | `02_swim_validate_compliance.yml` | No | Resyncs inventory at each target site and captures the **pre-upgrade IMAGE compliance baseline**. |
 | 03 | `03_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository and marks the upgrade image **Golden**. |
 | 04 | `04_swim_distribute.yml` | No | Copies the golden image to each device's flash. Run ahead of the window. |
 | 05 | `05_swim_activate.yml` | **YES — reloads devices** | Activates the golden image. Maintenance window only. |
@@ -164,7 +164,7 @@ ansible-psirt-swim-demo/
     │
     ├── playbooks/
     │   ├── 01_swim_deploy_http_image_server.yml
-    │   ├── 02_swim_preflight.yml
+    │   ├── 02_swim_validate_compliance.yml
     │   ├── 03_swim_import_and_tag.yml
     │   ├── 04_swim_distribute.yml
     │   ├── 05_swim_activate.yml
@@ -295,14 +295,14 @@ Cursor agents in this repo also load `.cursor/rules/readme-sync.mdc` and a
 
 `Settings/settings.json` is the only file you edit to change what the demo does.
 
-```jsonc
+```json
 {
   "project": [
     {
-      "HierarchyParent": "Global/PODS",   // ─┐ joined with "/" →
-      "HierarchyArea":   "POD 0",         //  │ "Global/PODS/POD 0/
-      "HierarchyBldg":   "Building P0",   //  │  Building P0/Floor 1"
-      "HierarchyFloor":  "Floor 1",       // ─┘
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
       "swim": {
         "image_server_base_url":    "http://198.18.134.28/images",
         "device_family_identifier": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
@@ -358,7 +358,7 @@ source ../.venv/bin/activate
 ansible-playbook playbooks/01_swim_deploy_http_image_server.yml
 
 # --- Non-disruptive, safe to run live in front of an audience ----------------
-ansible-playbook playbooks/02_swim_preflight.yml         # baseline: NON_COMPLIANT
+ansible-playbook playbooks/02_swim_validate_compliance.yml         # baseline: NON_COMPLIANT
 ansible-playbook playbooks/03_swim_import_and_tag.yml    # import + golden tag
 ansible-playbook playbooks/04_swim_distribute.yml        # stage to flash
 
@@ -381,7 +381,7 @@ ansible-playbook playbooks/03_swim_import_and_tag.yml \
   -e settings_json_path=/abs/path/alternate-settings.json
 
 # Verbose role output for a live walkthrough
-ansible-playbook playbooks/02_swim_preflight.yml -e catc_debug=true
+ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
 ```
 
 ### Suggested live-demo flow
@@ -431,12 +431,12 @@ translation point from data model to API payload.
 | Stage | Module / action | Notes |
 |---|---|---|
 | 01 | `apt`, `template`, `command` (rsync), `community.general.ufw`, `uri` | Verifies each image with an HTTP HEAD expecting `200` + `application/octet-stream` |
-| 02 | `inventory_workflow_manager`, `network_compliance_workflow_manager` | Resyncs inventory per site, then IMAGE compliance. Read-only. |
+| 02 | `network_compliance_workflow_manager` | Resyncs inventory per site, then IMAGE compliance. Prints a per-site compliance report as the final task. Read-only. |
 | 03 | `swim_workflow_manager` | Import by URL, then golden tag per family/role/site |
 | 04 | `swim_workflow_manager` | Long-running — governed by `catalystcenter_api_task_timeout` |
 | 05 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate` |
 | 06 | `network_compliance_workflow_manager` | IMAGE compliance per site; compare against the 02 baseline |
-| 07 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true` |
+| 07 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true`; honours `activation.*` like stage 05 |
 
 ---
 
@@ -483,7 +483,7 @@ reason — do not skip 03 on the assumption that only the new image matters.
 ## Debug Mode
 
 ```bash
-ansible-playbook playbooks/02_swim_preflight.yml -e catc_debug=true
+ansible-playbook playbooks/02_swim_validate_compliance.yml -e catc_debug=true
 ```
 
 | Setting | Effect |

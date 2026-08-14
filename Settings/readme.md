@@ -6,14 +6,14 @@ or role).
 
 ## Schema
 
-```jsonc
+```json
 {
-  "project": [                       // one entry per target site
+  "project": [
     {
-      "HierarchyParent": "Global/PODS",   // ─┐
-      "HierarchyArea":   "POD 0",         //  │ concatenated with "/" into
-      "HierarchyBldg":   "Building P0",   //  │ swim site_name
-      "HierarchyFloor":  "Floor 1",       // ─┘
+      "HierarchyParent": "Global/PODS",
+      "HierarchyArea":   "POD 0",
+      "HierarchyBldg":   "Building P0",
+      "HierarchyFloor":  "Floor 1",
       "swim": { ... }
     }
   ]
@@ -31,9 +31,9 @@ or role).
 | `device_role` | string | `ALL` \| `CORE` \| `DISTRIBUTION` \| `ACCESS` \| `BORDER ROUTER`. Narrows the blast radius. |
 | `upgrade_image` | string | `.bin` filename to import, tag Golden, distribute and activate. Set to the PSIRT-remediating image when responding to an advisory (default in repo: `cat9kv-universalk9.17.15.03.SPA.bin`; example fix build: `cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin`). |
 | `rollback_image` | string | Known-good `.bin` to return to in stage 07. Imported alongside `upgrade_image` in 03. Set to `""` to disable rollback. |
-| `activation.device_upgrade_mode` | string | `install` (recommended) or `bundle`. |
-| `activation.distribute_if_needed` | bool | Auto-distribute during activation when flash lacks the image. |
-| `activation.schedule_validate` | bool | Run CatC pre-activation validation before reload. |
+| `activation.device_upgrade_mode` | string | `install` (recommended), `bundle`, or `currentlyExists`. Applied to upgrade (05) and rollback (07) activation. |
+| `activation.distribute_if_needed` | bool | Auto-distribute during activation when flash lacks the image. Applied to upgrade (05) and rollback (07). |
+| `activation.schedule_validate` | bool | Run CatC pre-activation validation before reload. Applied to upgrade (05) and rollback (07). |
 
 ## Derived site path
 

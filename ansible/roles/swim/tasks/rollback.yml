@@ -5,7 +5,8 @@
 # Requires explicit confirmation extra-vars to prevent accidental reload:
 #   -e rollback_confirm=YES -e rollback_reload_ack=RELOAD_OK
 #
-# Pre:  swim_details.rollback_images.tag + .activate from settings.json rollback_image
+# Pre:  swim_details.rollback_images.tag + .activate from settings.json
+#       (rollback_image + activation.{device_upgrade_mode, distribute_if_needed, schedule_validate})
 # Post: rollback golden tag + activation on target sites
 # =============================================================================
 
