@@ -6,24 +6,22 @@ _swim_ci_redact() {
   local text="${1-}"
   [[ -z "$text" ]] && return 0
 
+  # Longest/literal paths first.
   if [[ -n "${SWIM_LAB_ROOT:-}" ]]; then
     text="${text//${SWIM_LAB_ROOT}/<lab-root>}"
   fi
   if [[ -n "${GITHUB_WORKSPACE:-}" ]]; then
     text="${text//${GITHUB_WORKSPACE}/<workspace>}"
   fi
-  if [[ -n "${HOME:-}" ]]; then
-    text="${text//${HOME}/<home>}"
-  fi
   if [[ -n "${RUNNER_ROOT:-}" ]]; then
     text="${text//${RUNNER_ROOT}/<runner-root>}"
   fi
+  if [[ -n "${HOME:-}" ]]; then
+    text="${text//${HOME}/<home>}"
+  fi
 
-  # Catch-all: macOS home paths and usernames in path segments.
-  text="$(printf '%s' "$text" | sed -E \
-    -e 's#/Users/[^/[:space:]]+#<home>#g' \
-    -e 's#/private/var/[^/[:space:]]+#<system-var>#g' \
-    -e 's#Speaking Sessions/Secure Networking Webinar[^[:space:]]*#<lab-root>#g')"
+  # Fallback for any remaining absolute home paths.
+  text="$(printf '%s' "$text" | sed -E 's#/Users/[^/[:space:]]+#<home>#g')"
 
   printf '%s' "$text"
 }
