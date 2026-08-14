@@ -14,7 +14,8 @@
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
 #     rollback_image  — the known-good .bin to return to
 #     device_family_name, device_series_name, device_role,
-#     activation.{device_upgrade_mode, distribute_if_needed, schedule_validate}
+#     activation.{device_upgrade_mode, distribute_if_needed, schedule_validate,
+#                 image_activation_timeout}
 #     HierarchyParent/Area/Bldg/Floor → site_name
 #   extra-vars: rollback_confirm, rollback_reload_ack
 #   connection.yml: catalystcenter_* connection params

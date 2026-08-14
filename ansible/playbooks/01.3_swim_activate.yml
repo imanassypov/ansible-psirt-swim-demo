@@ -8,9 +8,10 @@
 # Sourced:
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
 #     upgrade_image, device_family_name, device_series_name, device_role
-#     activation.device_upgrade_mode    — e.g. "install"
-#     activation.distribute_if_needed   — auto-distribute when flash lacks the image
-#     activation.schedule_validate      — CatC pre-activation validation
+#     activation.device_upgrade_mode       — e.g. "install"
+#     activation.distribute_if_needed      — auto-distribute when flash lacks the image
+#     activation.schedule_validate         — CatC pre-activation validation
+#     activation.image_activation_timeout  — seconds to wait for reload (default 3600)
 #     HierarchyParent/Area/Bldg/Floor → site_name
 #   connection.yml: catalystcenter_* connection, catalystcenter_api_task_timeout,
 #                   catalystcenter_task_poll_interval

@@ -328,7 +328,9 @@ Cursor agents in this repo also load `.cursor/rules/readme-sync.mdc` and a
         "activation": {
           "device_upgrade_mode":  "install",
           "distribute_if_needed": true,
-          "schedule_validate":    false
+          "schedule_validate":    false,
+          "image_activation_timeout":   3600,
+          "image_distribution_timeout": 3600
         }
       }
     }
@@ -612,8 +614,8 @@ translation point from data model to API payload.
 | 00.1 | `apt`, `template`, `command` (rsync), `community.general.ufw`, `uri` | Verifies each image with an HTTP HEAD expecting `200` + `application/octet-stream` |
 | 00.2 | `network_compliance_workflow_manager` | Default: pre-upgrade baseline → `00_preflight.json`. `-e post_activate=true`: post check + combined pre/post report. |
 | 01.1 | `swim_workflow_manager` | Import by URL, then golden tag per family/role/site |
-| 01.2 | `swim_workflow_manager` | Long-running — governed by `catalystcenter_api_task_timeout` |
-| 01.3 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate` |
+| 01.2 | `swim_workflow_manager` | Long-running — honours `image_distribution_timeout` from settings (default 3600s) |
+| 01.3 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate`, `image_activation_timeout` |
 | 02.1 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true`; honours `activation.*` like stage 01.3 |
 
 ---
@@ -684,7 +686,7 @@ ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 | 00.1 HTTP HEAD verification fails | nginx not serving, ufw blocking, or image not staged | `curl -I http://<image_server_ip>/images/<file>.bin` from the control node |
 | 01.1 import fails / times out | Catalyst Center cannot reach the image server | Confirm CatC → image server TCP/80 reachability; the URL must be resolvable *from CatC*, not from your laptop |
 | Golden tag applied but 01.2 finds no devices | Devices not assigned to the site, or `device_role` too narrow | Verify site assignment in CatC inventory; try `device_role: "ALL"` |
-| 01.2 / 01.3 times out | Large image over a slow link | Raise `catalystcenter_api_task_timeout` (default 3600s) |
+| 01.2 / 01.3 times out | Large image, slow link, or slow device reload | Raise `activation.image_distribution_timeout` / `activation.image_activation_timeout` in `settings.json` (default 3600s each). On CatC ≤ 2.3.7.9, also raise `catalystcenter_api_task_timeout` in `connection.yml`. |
 | `sshpass: command not found` in 00.1 | Password SSH auth without sshpass | `brew install sshpass`, or switch the image server to SSH keys and drop `ansible_ssh_pass` |
 | `Attempting to decrypt but no vault secrets found` | `.vault_pass` missing or unreadable | Recreate it at the repo root; `ansible.cfg` points at `../.vault_pass` |
 | rsync restarts repeatedly in 00.1 | Low-MTU VPN path | Expected — the role retries with resume. Tune `image_rsync_retries` / `image_rsync_timeout`. |

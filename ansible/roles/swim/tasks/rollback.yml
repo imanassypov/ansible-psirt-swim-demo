@@ -6,7 +6,8 @@
 #   -e rollback_confirm=YES -e rollback_reload_ack=RELOAD_OK
 #
 # Pre:  swim_details.rollback_images.tag + .activate from settings.json
-#       (rollback_image + activation.{device_upgrade_mode, distribute_if_needed, schedule_validate})
+#       (rollback_image + activation.{device_upgrade_mode, distribute_if_needed,
+#        schedule_validate, image_activation_timeout})
 # Post: rollback golden tag + activation on target sites
 # =============================================================================
 

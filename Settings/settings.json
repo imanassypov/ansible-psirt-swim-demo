@@ -16,7 +16,9 @@
                 "activation": {
                     "device_upgrade_mode": "install",
                     "distribute_if_needed": true,
-                    "schedule_validate": false
+                    "schedule_validate": false,
+                    "image_activation_timeout": 3600,
+                    "image_distribution_timeout": 3600
                 }
             }
         }

@@ -11,6 +11,7 @@
 # Sourced:
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
 #     upgrade_image, device_family_name, device_series_name, device_role
+#     activation.image_distribution_timeout — seconds to wait for distribute (default 3600)
 #     HierarchyParent/Area/Bldg/Floor → site_name
 #   connection.yml: catalystcenter_* connection, catalystcenter_api_task_timeout
 #                   (3600s) and catalystcenter_task_poll_interval (30s)

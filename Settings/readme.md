@@ -34,6 +34,8 @@ hardcoded in a playbook or role).
 | `activation.device_upgrade_mode` | string | `install` (recommended), `bundle`, or `currentlyExists`. Applied to upgrade (01.3) and rollback (02.1) activation. |
 | `activation.distribute_if_needed` | bool | Auto-distribute during activation when flash lacks the image. Applied to upgrade (01.3) and rollback (02.1). |
 | `activation.schedule_validate` | bool | Run CatC pre-activation validation before reload. Applied to upgrade (01.3) and rollback (02.1). |
+| `activation.image_activation_timeout` | int | Seconds to wait for activation/reload to complete (default 3600). Applied to upgrade (01.3) and rollback (02.1). |
+| `activation.image_distribution_timeout` | int | Seconds to wait for image distribution to complete (default 3600). Applied to distribute (01.2). |
 
 ## Derived site path
 
