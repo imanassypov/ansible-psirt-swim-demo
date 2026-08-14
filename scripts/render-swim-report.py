@@ -21,47 +21,211 @@ def newest_matching(directory: Path, pattern: str) -> Path | None:
     return matches[-1] if matches else None
 
 
+def _int_value(value: object, default: int = 0) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def parse_sites_from_compliance_register(compliance_run: dict) -> list[dict]:
+    """Parse ansible compliance register (mirrors build_compliance_site_reports.yml)."""
+    sites: list[dict] = []
+    for site_result in compliance_run.get("results", []):
+        if not isinstance(site_result, dict):
+            continue
+
+        site_name = site_result.get("item", "unknown")
+        devices: list[dict] = []
+        response = site_result.get("response")
+        if isinstance(response, dict):
+            for device_name, records in response.items():
+                rec = records[0] if isinstance(records, list) and records else {}
+                if not isinstance(rec, dict):
+                    continue
+                source_info = rec.get("sourceInfoList") or []
+                first_source = source_info[0] if source_info else {}
+                diff_list = first_source.get("diffList") if isinstance(first_source, dict) else []
+                diff = diff_list[0] if isinstance(diff_list, list) and diff_list else {}
+                if not isinstance(diff, dict):
+                    diff = {}
+                devices.append(
+                    {
+                        "device": device_name,
+                        "status": rec.get("status", "UNKNOWN"),
+                        "configured_image": diff.get("configuredValue", "n/a"),
+                        "intended_image": diff.get("intendedValue", "n/a"),
+                    }
+                )
+
+        msg = site_result.get("msg", {})
+        success_msg = msg if isinstance(msg, dict) else {}
+        summary = success_msg.get("Run Compliance Check Succeeded for following device(s)", {})
+        if not isinstance(summary, dict):
+            summary = {}
+        skipped_msg = success_msg.get("Run Compliance Check Skipped for following device(s)", {})
+        skipped_devices = skipped_msg.get("skipped_devices", []) if isinstance(skipped_msg, dict) else []
+
+        sites.append(
+            {
+                "site": site_name,
+                "task_failed": bool(site_result.get("failed", False)),
+                "compliant": _int_value(summary.get("Compliant Devices", 0)),
+                "non_compliant": _int_value(summary.get("Non-Compliant Devices", 0)),
+                "total_checked": _int_value(summary.get("Total Devices Checked", 0)),
+                "skipped_devices": skipped_devices if isinstance(skipped_devices, list) else [],
+                "devices": devices,
+            }
+        )
+    return sites
+
+
 def format_totals(label: str, totals: dict) -> str:
     return (
-        f"- **{label}:** compliant={totals.get('compliant', 0)}, "
-        f"non-compliant={totals.get('non_compliant', 0)}, "
-        f"checked={totals.get('total_checked', 0)}"
+        f"- **{label}:** compliant={_int_value(totals.get('compliant', 0))}, "
+        f"non-compliant={_int_value(totals.get('non_compliant', 0))}, "
+        f"checked={_int_value(totals.get('total_checked', 0))}"
     )
 
 
-def render_device_table(sites: list[dict], *, pre_post: bool = False) -> list[str]:
-    lines: list[str] = []
-    for site in sites:
-        lines.append(f"### Site: {site.get('site', 'unknown')}")
+def humanize_status(status: object) -> str:
+    return str(status).replace("_", "-").lower()
+
+
+def describe_outcome(pre_dev: dict, post_dev: dict) -> str:
+    pre_status = pre_dev.get("status", "n/a")
+    post_status = post_dev.get("status", "n/a")
+    pre_configured = pre_dev.get("configured_image", "n/a")
+    post_configured = post_dev.get("configured_image", "n/a")
+
+    if post_status == "COMPLIANT":
+        if pre_status != "COMPLIANT":
+            return "Now compliant"
+        return "Compliant (unchanged)"
+
+    if pre_configured != post_configured and post_configured != "n/a":
+        return f"Image updated ({pre_configured} → {post_configured})"
+
+    if pre_status == post_status:
+        return f"Still {humanize_status(post_status)}"
+
+    return f"{pre_status} → {post_status}"
+
+
+def merge_sites_by_name(pre_sites: list[dict], post_sites: list[dict]) -> list[dict]:
+    post_by_site = {s.get("site"): s for s in post_sites if isinstance(s, dict)}
+    merged: list[dict] = []
+    seen: set[str] = set()
+
+    for pre_site in pre_sites:
+        if not isinstance(pre_site, dict):
+            continue
+        site_name = pre_site.get("site", "unknown")
+        seen.add(site_name)
+        merged.append(
+            {
+                "site": site_name,
+                "pre": pre_site,
+                "post": post_by_site.get(site_name, {"devices": []}),
+            }
+        )
+
+    for post_site in post_sites:
+        if not isinstance(post_site, dict):
+            continue
+        site_name = post_site.get("site", "unknown")
+        if site_name not in seen:
+            merged.append(
+                {
+                    "site": site_name,
+                    "pre": {"devices": []},
+                    "post": post_site,
+                }
+            )
+
+    return merged
+
+
+def render_site_summary_table(merged_sites: list[dict]) -> list[str]:
+    lines = [
+        "## Site summary",
+        "",
+        "| Site | Pre compliant | Pre non-compliant | Pre checked | "
+        "Post compliant | Post non-compliant | Post checked |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for entry in merged_sites:
+        pre_site = entry["pre"]
+        post_site = entry["post"]
+        lines.append(
+            f"| {entry.get('site', 'unknown')} "
+            f"| {_int_value(pre_site.get('compliant', 0))} "
+            f"| {_int_value(pre_site.get('non_compliant', 0))} "
+            f"| {_int_value(pre_site.get('total_checked', 0))} "
+            f"| {_int_value(post_site.get('compliant', 0))} "
+            f"| {_int_value(post_site.get('non_compliant', 0))} "
+            f"| {_int_value(post_site.get('total_checked', 0))} |"
+        )
+    lines.append("")
+    return lines
+
+
+def render_device_pre_post_table(pre_site: dict, post_site: dict) -> list[str]:
+    lines = [
+        "| Device | Pre status | Pre configured | Pre intended | "
+        "Post status | Post configured | Post intended | Outcome |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+
+    pre_devices = {d["device"]: d for d in pre_site.get("devices", []) if "device" in d}
+    post_devices = {d["device"]: d for d in post_site.get("devices", []) if "device" in d}
+
+    for device_name in sorted(set(pre_devices) | set(post_devices)):
+        pre_dev = pre_devices.get(device_name, {})
+        post_dev = post_devices.get(device_name, {})
+        lines.append(
+            f"| {device_name} "
+            f"| {pre_dev.get('status', 'n/a')} "
+            f"| {pre_dev.get('configured_image', 'n/a')} "
+            f"| {pre_dev.get('intended_image', 'n/a')} "
+            f"| {post_dev.get('status', 'n/a')} "
+            f"| {post_dev.get('configured_image', 'n/a')} "
+            f"| {post_dev.get('intended_image', 'n/a')} "
+            f"| {describe_outcome(pre_dev, post_dev)} |"
+        )
+
+    skipped_pre = pre_site.get("skipped_devices") or []
+    skipped_post = post_site.get("skipped_devices") or []
+    if skipped_pre or skipped_post:
         lines.append("")
-        if pre_post:
-            lines.append("| Device | Pre Status | Post Status | Pre Configured | Post Configured |")
-            lines.append("| --- | --- | --- | --- | --- |")
-            pre_site = site if isinstance(site, dict) else {}
-            post_site = site
-            pre_devices = {d["device"]: d for d in pre_site.get("devices", []) if "device" in d}
-            post_devices = {d["device"]: d for d in post_site.get("devices", []) if "device" in d}
-            for device_name in sorted(set(pre_devices) | set(post_devices)):
-                pre_dev = pre_devices.get(device_name, {})
-                post_dev = post_devices.get(device_name, {})
-                lines.append(
-                    f"| {device_name} "
-                    f"| {pre_dev.get('status', 'n/a')} "
-                    f"| {post_dev.get('status', 'n/a')} "
-                    f"| {pre_dev.get('configured_image', 'n/a')} "
-                    f"| {post_dev.get('configured_image', 'n/a')} |"
-                )
-        else:
-            lines.append("| Device | Status | Configured | Intended |")
-            lines.append("| --- | --- | --- | --- |")
-            for dev in site.get("devices", []):
-                lines.append(
-                    f"| {dev.get('device', 'n/a')} "
-                    f"| {dev.get('status', 'n/a')} "
-                    f"| {dev.get('configured_image', 'n/a')} "
-                    f"| {dev.get('intended_image', 'n/a')} |"
-                )
+        if skipped_pre:
+            lines.append(f"**Skipped (pre):** {', '.join(map(str, skipped_pre))}")
+        if skipped_post:
+            lines.append(f"**Skipped (post):** {', '.join(map(str, skipped_post))}")
+
+    lines.append("")
+    return lines
+
+
+def render_device_pre_only_table(site: dict) -> list[str]:
+    lines = [
+        "| Device | Status | Configured | Intended |",
+        "| --- | --- | --- | --- |",
+    ]
+    for dev in site.get("devices", []):
+        lines.append(
+            f"| {dev.get('device', 'n/a')} "
+            f"| {dev.get('status', 'n/a')} "
+            f"| {dev.get('configured_image', 'n/a')} "
+            f"| {dev.get('intended_image', 'n/a')} |"
+        )
+
+    skipped = site.get("skipped_devices") or []
+    if skipped:
         lines.append("")
+        lines.append(f"**Skipped:** {', '.join(map(str, skipped))}")
+
+    lines.append("")
     return lines
 
 
@@ -87,7 +251,7 @@ def main() -> int:
         "",
     ]
 
-    evidence_files = sorted(p.name for p in report_dir.glob("*.json"))
+    evidence_files = sorted(p.name for p in report_dir.glob("*.json") if p.name != "manifest.json")
     if evidence_files:
         lines.append("## Evidence files")
         lines.append("")
@@ -97,80 +261,69 @@ def main() -> int:
 
     pre_post = load_json(pre_post_path) if pre_post_path else None
     if isinstance(pre_post, dict) and pre_post.get("phase") == "pre-post":
-        lines.append("## Compliance summary (pre vs post activation)")
+        lines.append("## Compliance overview")
         lines.append("")
         lines.append(f"- **Pre-upgrade run:** `{pre_post.get('pre_run_id', 'n/a')}`")
         lines.append(f"- **Post-activate run:** `{pre_post.get('post_run_id', 'n/a')}`")
         lines.append("")
         pre_totals = pre_post.get("pre_upgrade", {}).get("totals", {})
         post_totals = pre_post.get("post_activate", {}).get("totals", {})
-        lines.append(format_totals("Pre-upgrade", pre_totals))
-        lines.append(format_totals("Post-activate", post_totals))
+        lines.append(format_totals("Pre-upgrade (all sites)", pre_totals))
+        lines.append(format_totals("Post-activate (all sites)", post_totals))
         lines.append("")
 
         pre_sites = pre_post.get("pre_upgrade", {}).get("sites", [])
         post_sites = pre_post.get("post_activate", {}).get("sites", [])
-        post_by_site = {s.get("site"): s for s in post_sites if isinstance(s, dict)}
-        merged_sites = []
-        for pre_site in pre_sites:
-            site_name = pre_site.get("site")
-            merged_sites.append(
-                {
-                    "site": site_name,
-                    "devices": [],
-                    "_pre": pre_site,
-                    "_post": post_by_site.get(site_name, {"devices": []}),
-                }
-            )
-        for post_site in post_sites:
-            site_name = post_site.get("site")
-            if site_name not in {s.get("site") for s in pre_sites}:
-                merged_sites.append(
-                    {
-                        "site": site_name,
-                        "devices": [],
-                        "_pre": {"devices": []},
-                        "_post": post_site,
-                    }
-                )
+        merged_sites = merge_sites_by_name(pre_sites, post_sites)
 
-        lines.append("## Per-site device status")
+        lines.extend(render_site_summary_table(merged_sites))
+
+        lines.append("## Device details by site")
         lines.append("")
         for entry in merged_sites:
-            pre_site = entry["_pre"]
-            post_site = entry["_post"]
-            lines.append(f"### Site: {entry.get('site', 'unknown')}")
+            lines.append(f"### {entry.get('site', 'unknown')}")
             lines.append("")
-            lines.append("| Device | Pre Status | Post Status | Pre Configured | Post Configured |")
-            lines.append("| --- | --- | --- | --- | --- |")
-            pre_devices = {d["device"]: d for d in pre_site.get("devices", []) if "device" in d}
-            post_devices = {d["device"]: d for d in post_site.get("devices", []) if "device" in d}
-            for device_name in sorted(set(pre_devices) | set(post_devices)):
-                pre_dev = pre_devices.get(device_name, {})
-                post_dev = post_devices.get(device_name, {})
-                lines.append(
-                    f"| {device_name} "
-                    f"| {pre_dev.get('status', 'n/a')} "
-                    f"| {post_dev.get('status', 'n/a')} "
-                    f"| {pre_dev.get('configured_image', 'n/a')} "
-                    f"| {post_dev.get('configured_image', 'n/a')} |"
-                )
-            lines.append("")
+            lines.extend(render_device_pre_post_table(entry["pre"], entry["post"]))
     elif preflight_path:
         preflight = load_json(preflight_path)
-        lines.append("## Compliance summary (pre-upgrade only)")
+        lines.append("## Compliance overview (pre-upgrade only)")
         lines.append("")
         lines.append(
             "> Post-activation compliance was not captured in this run. "
-            "Check pipeline logs or re-run stage 00.2 with `-e post_activate=true`."
+            "Re-run stage 00.2 with `-e post_activate=true` after activation."
         )
         lines.append("")
-        if isinstance(preflight, dict) and "compliance" in preflight:
-            lines.append("- Evidence captured from pre-upgrade baseline.")
+
+        if isinstance(preflight, dict) and isinstance(preflight.get("compliance"), dict):
+            pre_sites = parse_sites_from_compliance_register(preflight["compliance"])
+            if pre_sites:
+                lines.append("## Site summary")
+                lines.append("")
+                lines.append("| Site | Compliant | Non-compliant | Checked |")
+                lines.append("| --- | ---: | ---: | ---: |")
+                for site in pre_sites:
+                    lines.append(
+                        f"| {site.get('site', 'unknown')} "
+                        f"| {_int_value(site.get('compliant', 0))} "
+                        f"| {_int_value(site.get('non_compliant', 0))} "
+                        f"| {_int_value(site.get('total_checked', 0))} |"
+                    )
+                lines.append("")
+
+                lines.append("## Device details by site")
+                lines.append("")
+                for site in pre_sites:
+                    lines.append(f"### {site.get('site', 'unknown')}")
+                    lines.append("")
+                    lines.extend(render_device_pre_only_table(site))
+            else:
+                lines.append(f"- Source: `{preflight_path.name}` (no site rows parsed)")
+                lines.append("")
+        else:
             lines.append(f"- Source: `{preflight_path.name}`")
-        lines.append("")
+            lines.append("")
     else:
-        lines.append("## Compliance summary")
+        lines.append("## Compliance overview")
         lines.append("")
         lines.append("_No compliance evidence files were found in this report directory._")
         lines.append("")

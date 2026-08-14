@@ -8,7 +8,7 @@ Each workflow run creates a subdirectory named `<run-number>-<run-id>/` containi
 
 | File | Description |
 |---|---|
-| `REPORT.md` | Human-readable compliance summary for auditors / change tickets |
+| `REPORT.md` | Human-readable compliance summary: site rollup plus pre/post device tables (status, configured, intended, outcome) |
 | `manifest.json` | Index of evidence files in the run |
 | `*-00_preflight.json` | Pre-upgrade IMAGE compliance baseline |
 | `*-00_post_activate.json` | Post-activation compliance check |
