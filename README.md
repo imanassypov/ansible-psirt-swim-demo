@@ -154,7 +154,7 @@ ansible-psirt-swim-demo/
 │   ├── settings.json                   # ★ THE DATA MODEL — the only file you edit for a demo
 │   └── readme.md                       # field-by-field schema reference
 │
-├── reports/                            # CI-committed pipeline evidence + REPORT.md summaries
+├── reports/                            # CI-generated evidence + REPORT.md (gitignored except README)
 │   └── README.md
 │
 └── ansible/
@@ -433,9 +433,9 @@ automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workfl
 | 4 | `01.3_swim_activate.yml` | Activate (reloads devices) |
 | 5 | `00.2_swim_validate_compliance.yml -e post_activate=true` | Post-activation check + pre/post report |
 
-Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`,
-a `REPORT.md` summary is generated, and the workflow commits the results back to the
-repository. See [`reports/README.md`](reports/README.md).
+Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`
+and a `REPORT.md` summary is generated on the runner (gitignored). See
+[`reports/README.md`](reports/README.md).
 
 ### Self-hosted runner setup
 

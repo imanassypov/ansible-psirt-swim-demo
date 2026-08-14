@@ -17,5 +17,6 @@ Each workflow run creates a subdirectory named `<run-number>-<run-id>/` containi
 | `*-20_distribute.json` | Distribution evidence |
 | `*-30_activate.json` | Activation evidence |
 
-Reports are committed automatically by the workflow. Raw runtime logs remain in
-`ansible/logs/` (gitignored).
+Run output is written here by the workflow (`collect-swim-reports.sh`) but is
+**gitignored** — only this README is tracked. Raw runtime logs remain in
+`ansible/logs/` (also gitignored).

@@ -17,9 +17,6 @@ concurrency:
   group: swim-psirt-pipeline
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
   swim-remediation:
     runs-on: self-hosted
@@ -45,9 +42,3 @@ jobs:
             "${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}" \
             "${{ steps.prepare.outputs.start_epoch }}"
 
-      - name: Commit and push reports
-        if: always() && steps.prepare.outcome == 'success' && steps.swim.outcome != 'cancelled' && steps.swim.outcome != 'skipped'
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-          GITHUB_SHA: ${{ github.sha }}
-        run: bash "${SWIM_LAB_ROOT}/scripts/ci/commit-reports.sh"

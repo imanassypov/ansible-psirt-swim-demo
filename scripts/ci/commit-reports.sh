@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Commit generated reports (no local paths in log output).
+# Note: reports/* is gitignored; this script is retained for manual use only
+# (git add -f reports/...) if you need to force-commit artifacts.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
