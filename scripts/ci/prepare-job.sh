@@ -33,8 +33,8 @@ for path in \
   fi
 done
 
-git fetch origin master
-git checkout -f "${GITHUB_SHA}"
+git fetch -q origin master
+git checkout -q -f "${GITHUB_SHA}"
 
 ANSIBLE_PLAYBOOK="$(resolve_ansible_playbook)"
 
@@ -51,4 +51,5 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
 fi
 
 ci_log "Lab repository synced to commit ${GITHUB_SHA:0:7}"
-"${ANSIBLE_PLAYBOOK}" --version 2>&1 | ci_redact_stream | head -1
+ansible_version="$("${ANSIBLE_PLAYBOOK}" --version 2>&1 || true)"
+ci_log "${ansible_version%%$'\n'*}"
