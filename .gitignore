@@ -1,0 +1,18 @@
+# Secrets — never commit
+.vault_pass
+**/vault.yml
+.env
+
+# Non-secret but host-specific
+ansible/inventory/group_vars/image_servers/vars.yml
+
+# Runtime artifacts
+ansible/logs/*
+!ansible/logs/.gitkeep
+ansible/.ansible/
+*.log
+
+# Python / OS
+.venv/
+__pycache__/
+.DS_Store

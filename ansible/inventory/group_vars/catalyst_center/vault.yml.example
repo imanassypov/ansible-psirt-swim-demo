@@ -1,0 +1,8 @@
+---
+# vault.yml.example — copy to vault.yml and encrypt:
+#   cp vault.yml.example vault.yml
+#   ansible-vault encrypt vault.yml
+#
+# Catalyst Center API credentials (used by every SWIM playbook, 01–07).
+catc_username: admin
+catc_password: your_catc_password_here

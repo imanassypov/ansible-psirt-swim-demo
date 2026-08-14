@@ -1,0 +1,27 @@
+---
+# Catalyst Center connection parameters for the SWIM (01–07) playbooks.
+# Secrets (catc_username / catc_password) come from vault.yml in this folder.
+
+# cisco.catalystcenter module params — used by roles/swim
+catalystcenter_host: 198.18.129.100
+catalystcenter_username: "{{ catc_username }}"
+catalystcenter_password: "{{ catc_password }}"
+catalystcenter_port: "443"
+catalystcenter_version: "2.3.7.9"
+catalystcenter_verify: false
+catalystcenter_debug: false
+catalystcenter_log: true
+catalystcenter_log_level: INFO
+catalystcenter_log_append: true
+catalystcenter_log_file_path: "{{ playbook_dir }}/../logs/catc-swim.log"
+validate_response_schema: true
+
+# Distribute/activate are long-running CatC tasks — poll for up to an hour.
+catalystcenter_api_task_timeout: 3600
+catalystcenter_task_poll_interval: 30
+
+# Verbose task output from the swim role (set true for live demos)
+catc_debug: false
+
+# Central data model — path relative to the playbooks/ directory
+settings_json_path: "../../Settings/settings.json"

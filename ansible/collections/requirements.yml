@@ -1,0 +1,9 @@
+---
+collections:
+  # SWIM workflow manager — the module every 01–07 playbook drives
+  - name: cisco.catalystcenter
+    version: "2.9.0"
+  # nginx image server (stage 01) uses community.general.ufw
+  - name: community.general
+    # 11.0.0+ requires ansible-core >= 2.18; this project pins core to 2.17.
+    version: ">=8.0.0,<11.0.0"

@@ -1,0 +1,35 @@
+---
+description: Keep README.md synchronized with repository changes
+alwaysApply: true
+---
+
+# README Sync Policy
+
+`README.md` is the operator-facing source of truth for this demo. Keep it current whenever you change how the repo works.
+
+## When README must change
+
+Update `README.md` in the same change set when you modify any of:
+
+- `ansible/playbooks/` (add, rename, remove, or reorder playbooks)
+- `ansible/roles/` (new tasks, behavior, evidence files, or stage flow)
+- `Settings/settings.json` or `Settings/readme.md` (schema, defaults, or field meaning)
+- `ansible/inventory/` or `ansible/collections/requirements.yml`
+- `requirements-ansible.txt` or `ansible/ansible.cfg`
+
+Also update `Settings/readme.md` when only the settings schema changes.
+
+## What to update in README
+
+At minimum, reflect changes in the relevant sections:
+
+1. **What It Does** — stage/playbook table
+2. **Directory Structure** — tree listing
+3. **Running the Demo** — `ansible-playbook` commands
+4. **How Each Stage Works** / **Evidence Files** / **Troubleshooting** — when behavior or outputs change
+
+## Before finishing
+
+Run `./scripts/check-readme-sync.sh` and fix any reported errors.
+
+If the repo uses git hooks, run `./scripts/install-git-hooks.sh` once after clone so commits are blocked when README is stale.
