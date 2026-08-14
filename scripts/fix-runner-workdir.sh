@@ -52,7 +52,7 @@ PY
 {
   echo "SWIM_LAB_ROOT=${REPO_ROOT}"
 } > "$RUNNER_ENV"
-echo "Wrote SWIM_LAB_ROOT to $RUNNER_ENV"
+echo "Wrote SWIM_LAB_ROOT to runner .env (path not printed in logs)."
 
 if [[ "$REPO_ROOT" == *" "* ]]; then
   echo ""

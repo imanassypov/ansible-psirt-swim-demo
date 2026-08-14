@@ -1,6 +1,9 @@
 # =============================================================================
 # SWIM PSIRT pipeline — triggered when Settings/settings.json changes
 # =============================================================================
+# Self-hosted lab runner: executes directly in SWIM_LAB_ROOT (from runner .env).
+# Skips actions/checkout so job logs never print the local workspace path.
+# =============================================================================
 name: SWIM PSIRT Pipeline
 
 on:
@@ -23,19 +26,13 @@ jobs:
     timeout-minutes: 180
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Link lab environment
-        run: bash scripts/ci/link-lab-environment.sh
-
-      - name: Record pipeline start time
-        id: pipeline
-        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - name: Prepare lab job
+        id: prepare
+        run: bash "${SWIM_LAB_ROOT}/scripts/ci/prepare-job.sh"
 
       - name: Run SWIM pipeline
         id: swim
-        run: bash scripts/ci/run-swim-pipeline.sh
+        run: bash "${SWIM_LAB_ROOT}/scripts/ci/run-swim-pipeline.sh"
 
       - name: Collect reports
         if: always() && steps.swim.outcome != 'cancelled'
@@ -44,13 +41,13 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          bash scripts/collect-swim-reports.sh \
+          bash "${SWIM_LAB_ROOT}/scripts/collect-swim-reports.sh" \
             "${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}" \
-            "${{ steps.pipeline.outputs.start_epoch }}"
+            "${{ steps.prepare.outputs.start_epoch }}"
 
       - name: Commit and push reports
         if: always() && steps.swim.outcome != 'cancelled'
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           GITHUB_SHA: ${{ github.sha }}
-        run: bash scripts/ci/commit-reports.sh
+        run: bash "${SWIM_LAB_ROOT}/scripts/ci/commit-reports.sh"

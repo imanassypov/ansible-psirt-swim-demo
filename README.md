@@ -138,7 +138,8 @@ ansible-psirt-swim-demo/
 │   ├── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
 │   ├── fix-runner-workdir.sh           # move _work out of paths with spaces
 │   ├── ensure-actions-runner.sh        # start runner if not already running
-│   └── ci/                             # workflow step scripts (link lab, run pipeline)
+│   └── ci/                             # workflow scripts (prepare, run, commit)
+│       └── lib/log.sh                  # redacts local paths from CI log output
 ├── .cursor/
 │   ├── rules/readme-sync.mdc           # agent policy — keep README current
 │   └── hooks.json                      # stop hook prompts README updates
@@ -537,16 +538,21 @@ local `.venv` and `vault.yml`.
 
 #### 4. How the job workspace relates to your lab files
 
-GitHub Actions **does not run in your editable repository root**. Even on a
-self-hosted runner, `actions/checkout` clones the triggering commit into the
-runner work folder (by default `~/gh-actions-work/...` after the fix above).
+CI runs **directly in your lab repository** (`SWIM_LAB_ROOT` from
+`.github/actions-runner/.env`). It does **not** use `actions/checkout`, so job
+logs never print your local workspace path. The prepare step runs
+`git fetch` + `git checkout` of the triggering commit in place.
 
-That checkout is a clean git tree — it does **not** include gitignored lab
-files (`.venv/`, `.vault_pass`, `vault.yml`, `ansible/logs/`). The workflow
-links those from `SWIM_LAB_ROOT` (your repository root on disk) via
-`scripts/ci/link-lab-environment.sh`.
+Gitignored lab files (`.venv/`, `.vault_pass`, `vault.yml`) are already on disk —
+no linking step is required.
 
-If the link step fails, complete [Installation](#installation) and run
+**Log redaction:** all CI scripts source `scripts/ci/lib/log.sh`, which replaces
+local paths with placeholders (`<lab-root>`, `<home>`, `<workspace>`) before
+writing to stdout/stderr. Ansible playbook output is piped through the same
+filter. Evidence JSON already redacts paths via the swim role's
+`write_evidence.yml`.
+
+If the prepare step fails, complete [Installation](#installation) and run
 `./scripts/fix-runner-workdir.sh --restart`.
 
 #### 5. GitHub secrets

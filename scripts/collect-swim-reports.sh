@@ -9,11 +9,19 @@ REPORTS_DIR="$REPO_ROOT/reports"
 RUN_LABEL="${1:-$(date +%Y%m%d-%H%M%S)}"
 SINCE_EPOCH="${2:-0}"
 
+if [[ -f "${REPO_ROOT}/scripts/ci/lib/log.sh" ]]; then
+  # shellcheck source=ci/lib/log.sh
+  source "${REPO_ROOT}/scripts/ci/lib/log.sh"
+  log() { ci_log "$@"; }
+else
+  log() { echo "$@"; }
+fi
+
 DEST="$REPORTS_DIR/$RUN_LABEL"
 mkdir -p "$DEST"
 
 if [[ ! -d "$LOGS_DIR" ]]; then
-  echo "ERROR: logs directory not found at $LOGS_DIR" >&2
+  log "ERROR: logs directory not found."
   exit 1
 fi
 
@@ -38,9 +46,9 @@ fi
 rm -f "$MARKER"
 
 if [[ "$copied" -eq 0 ]]; then
-  echo "WARNING: no evidence JSON files found newer than epoch ${SINCE_EPOCH}." >&2
+  log "WARNING: no evidence JSON files found for this pipeline window."
 fi
 
 python3 "$REPO_ROOT/scripts/render-swim-report.py" "$DEST"
 
-echo "Collected ${copied} evidence file(s) into reports/${RUN_LABEL}/"
+log "Collected ${copied} evidence file(s) into reports/${RUN_LABEL}/"
