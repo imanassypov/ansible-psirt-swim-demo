@@ -1,0 +1,82 @@
+{
+    "import": {
+        "changed": false,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": false,
+                "diff": [],
+                "failed": false,
+                "item": {
+                    "import_image_details": {
+                        "type": "remote",
+                        "url_details": {
+                            "payload": [
+                                {
+                                    "is_third_party": false,
+                                    "source_url": [
+                                        "http://198.18.134.28/images/cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin"
+                },
+                "msg": "Image(s) cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin were skipped as they already exist in Cisco Catalyst Center.",
+                "response": "Image(s) cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin were skipped as they already exist in Cisco Catalyst Center."
+            },
+            {
+                "ansible_loop_var": "item",
+                "changed": false,
+                "diff": [],
+                "failed": false,
+                "item": {
+                    "import_image_details": {
+                        "type": "remote",
+                        "url_details": {
+                            "payload": [
+                                {
+                                    "is_third_party": false,
+                                    "source_url": [
+                                        "http://198.18.134.28/images/cat9kv-universalk9.17.15.03.SPA.bin"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "name": "cat9kv-universalk9.17.15.03.SPA.bin"
+                },
+                "msg": "Image(s) cat9kv-universalk9.17.15.03.SPA.bin were skipped as they already exist in Cisco Catalyst Center.",
+                "response": "Image(s) cat9kv-universalk9.17.15.03.SPA.bin were skipped as they already exist in Cisco Catalyst Center."
+            }
+        ],
+        "skipped": false
+    },
+    "tag": {
+        "changed": true,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": true,
+                "diff": [],
+                "failed": false,
+                "item": {
+                    "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin @ Global/PODS/POD 0/Building P0/Floor 1 / ALL",
+                    "tagging_details": {
+                        "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+                        "device_role": "ALL",
+                        "image_name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
+                        "site_name": "Global/PODS/POD 0/Building P0/Floor 1",
+                        "tagging": true
+                    }
+                },
+                "msg": "Tagging image cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin golden for site Global/PODS/POD 0/Building P0/Floor 1 for family Cisco Catalyst 9000 UADP 8 Port Virtual Switch for device role ALL successful.",
+                "response": "Tagging image cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin golden for site Global/PODS/POD 0/Building P0/Floor 1 for family Cisco Catalyst 9000 UADP 8 Port Virtual Switch for device role ALL successful."
+            }
+        ],
+        "skipped": false
+    }
+}
