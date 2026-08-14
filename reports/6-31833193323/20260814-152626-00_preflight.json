@@ -1,0 +1,277 @@
+{
+    "compliance": {
+        "changed": true,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": true,
+                "diff": [],
+                "failed": false,
+                "item": "Global/PODS/POD 0/Building P0/Floor 1",
+                "msg": {
+                    "Run Compliance Check Succeeded for following device(s)": {
+                        "Compliant Devices": 0,
+                        "Non-Compliant Devices": 6,
+                        "Total Devices Checked": 6
+                    }
+                },
+                "response": {
+                    "198.19.1.1": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=ed79f85f-e9e4-48ad-ae03-176f6e773f86",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "ed79f85f-e9e4-48ad-ae03-176f6e773f86",
+                            "lastSyncTime": 1786711972890,
+                            "lastUpdateTime": 1786735582024,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576653",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "64aed4fe-dcc8-467f-8f2c-063f78c87049",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ],
+                    "198.19.1.2": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=008d3d55-46b2-46b4-b212-21dd3c12de1f",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "008d3d55-46b2-46b4-b212-21dd3c12de1f",
+                            "lastSyncTime": 1786711972937,
+                            "lastUpdateTime": 1786735582023,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576654",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "e4244de8-35d1-4316-b563-44a415e3a178",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ],
+                    "198.19.1.3": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=9e202660-6087-454a-8182-9ade595ef0fe",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "9e202660-6087-454a-8182-9ade595ef0fe",
+                            "lastSyncTime": 1786711973082,
+                            "lastUpdateTime": 1786735582024,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576655",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "a069ce2a-989f-4ac3-9324-a9a75da4f6e1",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ],
+                    "198.19.1.4": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=b5b400fb-8161-485f-baef-d70d4d680937",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "b5b400fb-8161-485f-baef-d70d4d680937",
+                            "lastSyncTime": 1786711972847,
+                            "lastUpdateTime": 1786735582024,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576656",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "d379ee42-4f65-4605-9a95-d0b6f539d7c4",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ],
+                    "198.19.1.5": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=fbd028f1-f772-48a5-a7dd-dd55eac302c6",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "fbd028f1-f772-48a5-a7dd-dd55eac302c6",
+                            "lastSyncTime": 1786711972994,
+                            "lastUpdateTime": 1786735582024,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576652",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "ea69e02f-0ccf-4f95-8f24-74e5a8625f11",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ],
+                    "198.19.1.6": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id=31da5636-84fc-4d56-8958-59117ce0ee7d",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "31da5636-84fc-4d56-8958-59117ce0ee7d",
+                            "lastSyncTime": 1786711973051,
+                            "lastUpdateTime": 1786735582024,
+                            "remediationSupported": false,
+                            "sourceInfoList": [
+                                {
+                                    "ackStatus": "UNACKNOWLEDGED",
+                                    "appName": "IMAGE",
+                                    "count": 1,
+                                    "diffList": [
+                                        {
+                                            "ackStatus": "UNACKNOWLEDGED",
+                                            "businessKey": null,
+                                            "configuredValue": "17.15.03.0.5635",
+                                            "diffModelName": null,
+                                            "displayName": "2576657",
+                                            "extendedAttributes": {},
+                                            "hierarchy": null,
+                                            "instanceUUID": "47978c0b-b06a-40be-b849-45f80d0ec1dc",
+                                            "intendedValue": "17.15.03.0.5635",
+                                            "moveFromPath": null,
+                                            "op": "replace",
+                                            "path": null
+                                        }
+                                    ],
+                                    "name": "SwimDeviceStatus",
+                                    "sourceEnum": "IMAGE",
+                                    "type": "IMAGE"
+                                }
+                            ],
+                            "state": "SUCCESS",
+                            "status": "NON_COMPLIANT"
+                        }
+                    ]
+                },
+                "status": "success"
+            }
+        ],
+        "skipped": false
+    },
+    "phase": "pre-upgrade",
+    "resync": {
+        "changed": false,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": false,
+                "diff": [],
+                "failed": false,
+                "item": "Global/PODS/POD 0/Building P0/Floor 1",
+                "msg": "No changes were made. No inventory actions were performed in Cisco Catalyst Center.",
+                "response": "No changes were made. No inventory actions were performed in Cisco Catalyst Center."
+            }
+        ],
+        "skipped": false
+    }
+}
