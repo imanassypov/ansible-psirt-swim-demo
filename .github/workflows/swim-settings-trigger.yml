@@ -9,8 +9,9 @@
 #   5. 00.2 validate compliance (post-activation, pre/post report)
 #   6. Commit evidence + summary under reports/
 #
-# Requires a self-hosted runner with lab reachability to Catalyst Center.
-# GitHub-hosted runners cannot reach private lab controllers (198.18.x).
+# Self-hosted lab runner: reuses the parent repository's .venv, .vault_pass, and
+# vault.yml (see "Link lab environment" step). GitHub checkout lands in
+# .github/actions-runner/_work/... — a clean copy without gitignored files.
 # =============================================================================
 name: SWIM PSIRT Pipeline
 
@@ -37,39 +38,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Ansible and collections
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-ansible.txt
-          cd ansible
-          ansible-galaxy collection install -r collections/requirements.yml
-          ansible-galaxy collection install ansible.utils
-
-      - name: Configure Catalyst Center vault
-        env:
-          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-          CATC_USERNAME: ${{ secrets.CATC_USERNAME }}
-          CATC_PASSWORD: ${{ secrets.CATC_PASSWORD }}
+      - name: Link lab environment
         run: |
           set -euo pipefail
-          if [[ -z "${ANSIBLE_VAULT_PASSWORD:-}" || -z "${CATC_USERNAME:-}" || -z "${CATC_PASSWORD:-}" ]]; then
-            echo "Missing required secrets: ANSIBLE_VAULT_PASSWORD, CATC_USERNAME, CATC_PASSWORD" >&2
+          # GITHUB_WORKSPACE = .../.github/actions-runner/_work/<repo>/<repo>
+          # Lab repo root (with .venv, .vault_pass, vault.yml) is five levels up.
+          LAB_ROOT="$(cd "${GITHUB_WORKSPACE}/../../../../../" && pwd)"
+          echo "Lab root: ${LAB_ROOT}"
+          echo "Job workspace: ${GITHUB_WORKSPACE}"
+
+          missing=0
+          for path in \
+            ".venv/bin/ansible-playbook" \
+            ".vault_pass" \
+            "ansible/inventory/group_vars/catalyst_center/vault.yml"; do
+            if [[ ! -e "${LAB_ROOT}/${path}" ]]; then
+              echo "Missing lab file: ${path}" >&2
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            echo "Install the lab environment first (see README Installation)." >&2
             exit 1
           fi
-          umask 077
-          printf '%s' "$ANSIBLE_VAULT_PASSWORD" > .vault_pass
-          printf '%s\n' \
-            '---' \
-            "catc_username: ${CATC_USERNAME}" \
-            "catc_password: ${CATC_PASSWORD}" \
-            > ansible/inventory/group_vars/catalyst_center/vault.yml
-          ansible-vault encrypt ansible/inventory/group_vars/catalyst_center/vault.yml \
-            --vault-password-file .vault_pass
+
+          ln -sfn "${LAB_ROOT}/.venv" .venv
+          ln -sfn "${LAB_ROOT}/.vault_pass" .vault_pass
+          mkdir -p ansible/inventory/group_vars/catalyst_center
+          ln -sfn "${LAB_ROOT}/ansible/inventory/group_vars/catalyst_center/vault.yml" \
+            ansible/inventory/group_vars/catalyst_center/vault.yml
+
+          echo "${LAB_ROOT}/.venv/bin" >> "$GITHUB_PATH"
+          ansible-playbook --version
+          ansible-galaxy collection list cisco.catalystcenter 2>/dev/null | head -3 || true
 
       - name: Record pipeline start time
         id: pipeline

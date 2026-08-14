@@ -127,6 +127,7 @@ Note the image transfer direction: **Catalyst Center pulls from nginx.** Stage
 
 ```
 ansible-psirt-swim-demo/
+├── .envrc                              # direnv — auto-start Actions runner (non-blocking)
 ├── .github/workflows/
 │   └── swim-settings-trigger.yml       # CI: settings.json → SWIM pipeline → reports/
 ├── scripts/
@@ -134,7 +135,8 @@ ansible-psirt-swim-demo/
 │   ├── collect-swim-reports.sh         # copies evidence JSON into reports/
 │   ├── install-git-hooks.sh            # installs pre-commit README sync hook
 │   ├── render-swim-report.py           # builds REPORT.md from compliance evidence
-│   └── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
+│   ├── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
+│   └── ensure-actions-runner.sh        # start runner if not already running
 ├── .cursor/
 │   ├── rules/readme-sync.mdc           # agent policy — keep README current
 │   └── hooks.json                      # stop hook prompts README updates
@@ -382,11 +384,11 @@ ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e post_activate=tr
 ```bash
 # Override image paths without editing vars.yml
 ansible-playbook playbooks/00.1_swim_deploy_image_server.yml \
-  -e '{"image_local_paths":["/abs/a.SSA.bin","/abs/b.SPA.bin"]}'
+  -e '{"image_local_paths":["../images/a.SSA.bin","../images/b.SPA.bin"]}'
 
 # Point at a different data model
 ansible-playbook playbooks/01.1_swim_import_and_tag.yml \
-  -e settings_json_path=/abs/path/alternate-settings.json
+  -e settings_json_path=../../Settings/alternate-settings.json
 
 # Pin a specific pre-upgrade baseline when several exist in logs/
 ansible-playbook playbooks/00.2_swim_validate_compliance.yml \
@@ -429,39 +431,122 @@ Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>
 a `REPORT.md` summary is generated, and the workflow commits the results back to the
 repository. See [`reports/README.md`](reports/README.md).
 
-### Runner requirement
+### Self-hosted runner setup
 
-The workflow uses a **self-hosted runner** because Catalyst Center and the lab
-network are private (`198.18.x`). Register a runner on a host that can reach CatC
-over HTTPS and can run Ansible.
+The workflow uses `runs-on: self-hosted` because Catalyst Center and the lab
+network are private (`198.18.x`). The runner must live on a host that can reach
+CatC over HTTPS and run Ansible.
 
-Install from this repo (creates `.github/actions-runner/`, gitignored):
+#### 1. Install and register the runner
+
+From the repository root:
 
 ```bash
 ./scripts/setup-actions-runner.sh --start-service
 ```
 
-Re-run without `--start-service` to download/configure only; start interactively
-with `cd .github/actions-runner && ./run.sh`, or install the launchd service with
-`./svc.sh install && ./svc.sh start`.
+This downloads the GitHub Actions runner into `.github/actions-runner/` (gitignored)
+and registers it with the repository. Verify it under **Settings → Actions →
+Runners** in GitHub.
 
-Verify the runner appears under **Settings → Actions → Runners** in GitHub.
+Manual start (when not using direnv):
 
-> **macOS note:** If the repo lives under `~/Documents`, launchd (`./svc.sh`) is
-> blocked by macOS privacy controls. The setup script falls back to `./run.sh` in
-> the background. For a always-on service, move the repo outside `Documents` or
-> grant Full Disk Access to the runner.
+```bash
+cd .github/actions-runner && ./run.sh
+```
 
-### Required GitHub secrets
+Or as a background process:
 
-| Secret | Description |
+```bash
+cd .github/actions-runner && nohup ./run.sh >> runner-console.log 2>&1 &
+```
+
+> **macOS note:** If the repository is under macOS `Documents`, launchd
+> (`./svc.sh`) is often blocked by privacy controls. The setup script falls back
+> to `./run.sh` in the background. For an always-on service, keep the repo outside
+> `Documents` or grant Full Disk Access to the runner binary.
+
+#### 2. Auto-start with direnv
+
+The runner process exits on logout or reboot. This repo ships a `.envrc` that
+starts it automatically when you enter the directory — without blocking your
+shell (direnv waits for `.envrc` to finish, so the runner is launched in a
+detached background subshell).
+
+**Prerequisites**
+
+| Requirement | Notes |
 |---|---|
-| `ANSIBLE_VAULT_PASSWORD` | Passphrase used to encrypt `vault.yml` at runtime |
-| `CATC_USERNAME` | Catalyst Center API username |
-| `CATC_PASSWORD` | Catalyst Center API password |
+| [direnv](https://direnv.net/) | `brew install direnv` |
+| direnv shell hook | Add `eval "$(direnv hook zsh)"` to your shell rc file (once, per [direnv docs](https://direnv.net/docs/hook.html)) |
+| Runner installed | `./scripts/setup-actions-runner.sh` (step 1) |
 
-The workflow writes and encrypts `ansible/inventory/group_vars/catalyst_center/vault.yml`
-at runtime — no vault file is committed.
+**One-time allow** (from the repository root, after cloning or whenever
+`.envrc` changes):
+
+```bash
+direnv allow
+```
+
+On every `cd` into the repo, direnv loads `.envrc`, which calls
+`scripts/ensure-actions-runner.sh --quiet`. That script is a no-op when
+`Runner.Listener` is already running.
+
+Re-allow after editing `.envrc`:
+
+```bash
+direnv allow
+```
+
+**What `.envrc` does**
+
+```bash
+# Non-blocking — direnv must not wait on the runner process.
+if [[ -x scripts/ensure-actions-runner.sh ]]; then
+  ( scripts/ensure-actions-runner.sh --quiet </dev/null >/dev/null 2>&1 & )
+fi
+```
+
+**Verify**
+
+```bash
+pgrep -fl Runner.Listener
+tail -f .github/actions-runner/runner-console.log
+```
+
+#### 3. How the job workspace relates to your lab files
+
+GitHub Actions **does not run in your editable repository root**. Even on a
+self-hosted runner, `actions/checkout` clones the triggering commit into a
+separate job directory:
+
+```
+.github/actions-runner/_work/ansible-psirt-swim-demo/ansible-psirt-swim-demo/
+```
+
+That checkout is a clean git tree — it does **not** include gitignored lab
+files (`.venv/`, `.vault_pass`, `vault.yml`, `ansible/logs/`). The workflow
+therefore **links** those from the parent repository (five levels up from the
+job workspace) before running playbooks. No Python install or vault recreation
+step is needed when the lab environment is already configured locally.
+
+If the link step fails, complete [Installation](#installation) in the parent repo
+first.
+
+#### 4. GitHub secrets
+
+GitHub secrets are **not required** when the workflow reuses your local
+`.vault_pass` and encrypted `vault.yml`. They were only needed by the earlier
+workflow design that rebuilt vault from secrets on every run.
+
+Optional: keep secrets if you later move to a runner machine that does not
+share the parent repo's lab files.
+
+| Secret | When needed |
+|---|---|
+| `ANSIBLE_VAULT_PASSWORD` | Only if vault is rebuilt from secrets (not used with lab link) |
+| `CATC_USERNAME` | Same |
+| `CATC_PASSWORD` | Same |
 
 > **Note:** Stage 01.3 reloads devices. Treat every `settings.json` push to the
 > default branch as a production change unless you disable or gate the workflow.
