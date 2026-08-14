@@ -1,18 +1,6 @@
 # =============================================================================
 # SWIM PSIRT pipeline — triggered when Settings/settings.json changes
 # =============================================================================
-# Sequence:
-#   1. 00.2 validate compliance (pre-upgrade baseline)
-#   2. 01.1 import and tag
-#   3. 01.2 distribute
-#   4. 01.3 activate (reloads devices)
-#   5. 00.2 validate compliance (post-activation, pre/post report)
-#   6. Commit evidence + summary under reports/
-#
-# Self-hosted lab runner: reuses the parent repository's .venv, .vault_pass, and
-# vault.yml (see "Link lab environment" step). GitHub checkout lands in
-# .github/actions-runner/_work/... — a clean copy without gitignored files.
-# =============================================================================
 name: SWIM PSIRT Pipeline
 
 on:
@@ -39,38 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Link lab environment
-        run: |
-          set -euo pipefail
-          # GITHUB_WORKSPACE = .../.github/actions-runner/_work/<repo>/<repo>
-          # Lab repo root (with .venv, .vault_pass, vault.yml) is five levels up.
-          LAB_ROOT="$(cd "${GITHUB_WORKSPACE}/../../../../../" && pwd)"
-          echo "Lab root: ${LAB_ROOT}"
-          echo "Job workspace: ${GITHUB_WORKSPACE}"
-
-          missing=0
-          for path in \
-            ".venv/bin/ansible-playbook" \
-            ".vault_pass" \
-            "ansible/inventory/group_vars/catalyst_center/vault.yml"; do
-            if [[ ! -e "${LAB_ROOT}/${path}" ]]; then
-              echo "Missing lab file: ${path}" >&2
-              missing=1
-            fi
-          done
-          if [[ "$missing" -ne 0 ]]; then
-            echo "Install the lab environment first (see README Installation)." >&2
-            exit 1
-          fi
-
-          ln -sfn "${LAB_ROOT}/.venv" .venv
-          ln -sfn "${LAB_ROOT}/.vault_pass" .vault_pass
-          mkdir -p ansible/inventory/group_vars/catalyst_center
-          ln -sfn "${LAB_ROOT}/ansible/inventory/group_vars/catalyst_center/vault.yml" \
-            ansible/inventory/group_vars/catalyst_center/vault.yml
-
-          echo "${LAB_ROOT}/.venv/bin" >> "$GITHUB_PATH"
-          ansible-playbook --version
-          ansible-galaxy collection list cisco.catalystcenter 2>/dev/null | head -3 || true
+        run: bash scripts/ci/link-lab-environment.sh
 
       - name: Record pipeline start time
         id: pipeline
@@ -78,23 +35,7 @@ jobs:
 
       - name: Run SWIM pipeline
         id: swim
-        working-directory: ansible
-        run: |
-          set -euo pipefail
-          echo "=== Stage 00.2 — pre-upgrade compliance ==="
-          ansible-playbook playbooks/00.2_swim_validate_compliance.yml
-
-          echo "=== Stage 01.1 — import and golden tag ==="
-          ansible-playbook playbooks/01.1_swim_import_and_tag.yml
-
-          echo "=== Stage 01.2 — distribute to flash ==="
-          ansible-playbook playbooks/01.2_swim_distribute.yml
-
-          echo "=== Stage 01.3 — activate (device reload) ==="
-          ansible-playbook playbooks/01.3_swim_activate.yml
-
-          echo "=== Stage 00.2 — post-activation compliance ==="
-          ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e post_activate=true
+        run: bash scripts/ci/run-swim-pipeline.sh
 
       - name: Collect reports
         if: always() && steps.swim.outcome != 'cancelled'
@@ -103,25 +44,13 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          ./scripts/collect-swim-reports.sh \
+          bash scripts/collect-swim-reports.sh \
             "${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}" \
             "${{ steps.pipeline.outputs.start_epoch }}"
 
       - name: Commit and push reports
         if: always() && steps.swim.outcome != 'cancelled'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reports/
-          if git diff --cached --quiet; then
-            echo "No new report artifacts to commit."
-            exit 0
-          fi
-          git commit -m "$(cat <<EOF
-          chore(reports): SWIM pipeline evidence for settings.json change
-
-          Workflow run: ${GITHUB_RUN_NUMBER}
-          Commit: ${GITHUB_SHA}
-          EOF
-          )"
-          git push
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash scripts/ci/commit-reports.sh

@@ -136,7 +136,9 @@ ansible-psirt-swim-demo/
 │   ├── install-git-hooks.sh            # installs pre-commit README sync hook
 │   ├── render-swim-report.py           # builds REPORT.md from compliance evidence
 │   ├── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
-│   └── ensure-actions-runner.sh        # start runner if not already running
+│   ├── fix-runner-workdir.sh           # move _work out of paths with spaces
+│   ├── ensure-actions-runner.sh        # start runner if not already running
+│   └── ci/                             # workflow step scripts (link lab, run pipeline)
 ├── .cursor/
 │   ├── rules/readme-sync.mdc           # agent policy — keep README current
 │   └── hooks.json                      # stop hook prompts README updates
@@ -514,26 +516,40 @@ pgrep -fl Runner.Listener
 tail -f .github/actions-runner/runner-console.log
 ```
 
-#### 3. How the job workspace relates to your lab files
+#### 3. Paths with spaces (required for this demo layout)
+
+If the repository path contains spaces, GitHub Actions `run:` steps fail with:
+
+```
+bash: .../Speaking: No such file or directory
+```
+
+The runner invokes temp scripts as `bash -e {0}`; an unquoted `{0}` under a
+spaced path breaks every step. Fix once from the repository root:
+
+```bash
+./scripts/fix-runner-workdir.sh --restart
+```
+
+This moves job checkouts to `~/gh-actions-work/` (no spaces) and writes
+`SWIM_LAB_ROOT` to `.github/actions-runner/.env` so CI can still link your
+local `.venv` and `vault.yml`.
+
+#### 4. How the job workspace relates to your lab files
 
 GitHub Actions **does not run in your editable repository root**. Even on a
-self-hosted runner, `actions/checkout` clones the triggering commit into a
-separate job directory:
-
-```
-.github/actions-runner/_work/ansible-psirt-swim-demo/ansible-psirt-swim-demo/
-```
+self-hosted runner, `actions/checkout` clones the triggering commit into the
+runner work folder (by default `~/gh-actions-work/...` after the fix above).
 
 That checkout is a clean git tree — it does **not** include gitignored lab
 files (`.venv/`, `.vault_pass`, `vault.yml`, `ansible/logs/`). The workflow
-therefore **links** those from the parent repository (five levels up from the
-job workspace) before running playbooks. No Python install or vault recreation
-step is needed when the lab environment is already configured locally.
+links those from `SWIM_LAB_ROOT` (your repository root on disk) via
+`scripts/ci/link-lab-environment.sh`.
 
-If the link step fails, complete [Installation](#installation) in the parent repo
-first.
+If the link step fails, complete [Installation](#installation) and run
+`./scripts/fix-runner-workdir.sh --restart`.
 
-#### 4. GitHub secrets
+#### 5. GitHub secrets
 
 GitHub secrets are **not required** when the workflow reuses your local
 `.vault_pass` and encrypted `vault.yml`. They were only needed by the earlier
