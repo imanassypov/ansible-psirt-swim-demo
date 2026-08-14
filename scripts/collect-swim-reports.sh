@@ -3,7 +3,7 @@
 # a human-readable summary markdown for the change ticket / audit trail.
 set -euo pipefail
 
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+REPO_ROOT="${SWIM_LAB_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 LOGS_DIR="$REPO_ROOT/ansible/logs"
 REPORTS_DIR="$REPO_ROOT/reports"
 RUN_LABEL="${1:-$(date +%Y%m%d-%H%M%S)}"

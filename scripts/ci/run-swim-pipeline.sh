@@ -9,11 +9,22 @@ source "${SCRIPT_DIR}/lib/log.sh"
 ci_cd_lab
 cd ansible
 
+if [[ -z "${ANSIBLE_PLAYBOOK:-}" ]]; then
+  if [[ -x "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook" ]]; then
+    ANSIBLE_PLAYBOOK="${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook"
+  elif command -v ansible-playbook >/dev/null 2>&1; then
+    ANSIBLE_PLAYBOOK="$(command -v ansible-playbook)"
+  else
+    ci_log "ERROR: ansible-playbook not found (run Prepare lab job first)."
+    exit 1
+  fi
+fi
+
 _run_playbook() {
   local label="$1"
   shift
   ci_log "=== ${label} ==="
-  "${SWIM_LAB_ROOT}/.venv/bin/ansible-playbook" "$@" 2>&1 | ci_redact_stream
+  "${ANSIBLE_PLAYBOOK}" "$@" 2>&1 | ci_redact_stream
 }
 
 _run_playbook "Stage 00.2 — pre-upgrade compliance" \
