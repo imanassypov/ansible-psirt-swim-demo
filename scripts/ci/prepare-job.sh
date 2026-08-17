@@ -6,22 +6,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/log.sh
 source "${SCRIPT_DIR}/lib/log.sh"
 
+if [[ "${SWIM_PREPARE_PHASE:-}" != "post-sync" ]]; then
+  ci_cd_lab
+
+  for path in \
+    ".vault_pass" \
+    "ansible/inventory/group_vars/catalyst_center/vault.yml"; do
+    if [[ ! -e "$path" ]]; then
+      ci_log "ERROR: Missing lab file: ${path}"
+      ci_log "Complete Installation (README) before running CI."
+      exit 1
+    fi
+  done
+
+  git fetch -q origin master
+  git checkout -q master
+  git reset --hard "${GITHUB_SHA}"
+
+  # CI helpers track origin/master so a settings.json commit at an older SHA
+  # does not run a stale in-memory prepare script against a reset tree.
+  git checkout origin/master -- scripts/ci/
+
+  export SWIM_PREPARE_PHASE=post-sync
+  exec bash "${SWIM_LAB_ROOT}/scripts/ci/prepare-job.sh"
+fi
+
 ci_cd_lab
-
-for path in \
-  ".vault_pass" \
-  "ansible/inventory/group_vars/catalyst_center/vault.yml"; do
-  if [[ ! -e "$path" ]]; then
-    ci_log "ERROR: Missing lab file: ${path}"
-    ci_log "Complete Installation (README) before running CI."
-    exit 1
-  fi
-done
-
-git fetch -q origin master
-git checkout -q master
-git reset --hard "${GITHUB_SHA}"
-
 ci_activate_lab_env
 if [[ -z "${ANSIBLE_PLAYBOOK:-}" ]]; then
   ci_log "ERROR: ansible-playbook not found in .venv or PATH."
