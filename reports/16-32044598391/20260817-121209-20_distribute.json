@@ -1,0 +1,27 @@
+{
+    "changed": false,
+    "msg": "All items completed",
+    "results": [
+        {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "diff": [],
+            "failed": false,
+            "item": {
+                "image_distribution_details": {
+                    "device_family_name": "Switches and Hubs",
+                    "device_role": "ALL",
+                    "device_series_name": "Cisco Catalyst 9000 Series Virtual Switches",
+                    "image_distribution_timeout": 3600,
+                    "image_name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
+                    "site_name": "{site-hierarchy}"
+                },
+                "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin @ {site-hierarchy}"
+            },
+            "msg": "Devices not eligible for image distribution: device-02, device-03, device-05, device-06, device-01, device-04",
+            "response": "Devices not eligible for image distribution: device-02, device-03, device-05, device-06, device-01, device-04",
+            "status": "success"
+        }
+    ],
+    "skipped": false
+}

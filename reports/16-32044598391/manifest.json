@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-08-17T16:14:52.215591+00:00",
+  "report_directory": "16-32044598391",
+  "evidence_files": [
+    "20260817-121152-00_preflight.json",
+    "20260817-121201-10_import_and_tag.json",
+    "20260817-121209-20_distribute.json",
+    "20260817-121217-30_activate.json",
+    "20260817-121450-00_post_activate.json",
+    "20260817-121451-00_compliance_pre_post.json"
+  ],
+  "compliance_pre_post": "20260817-121451-00_compliance_pre_post.json",
+  "preflight": "20260817-121152-00_preflight.json",
+  "post_activate": "20260817-121450-00_post_activate.json"
+}
