@@ -16,10 +16,13 @@
 - name: Poll device reachability before post-activate compliance
   when: swim_details.reachability.enabled | default(true) | bool
   block:
-    - name: Compute reachability poll settings
+    - name: Compute reachability poll interval and timeout
       ansible.builtin.set_fact:
         _reachability_poll_interval: "{{ swim_details.reachability.poll_interval | default(60) | int }}"
         _reachability_poll_timeout: "{{ swim_details.reachability.poll_timeout | default(600) | int }}"
+
+    - name: Compute reachability poll attempt count
+      ansible.builtin.set_fact:
         _reachability_poll_attempts: >-
           {{ (
                (_reachability_poll_timeout | int)
