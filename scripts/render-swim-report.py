@@ -21,6 +21,31 @@ def newest_matching(directory: Path, pattern: str) -> Path | None:
     return matches[-1] if matches else None
 
 
+def md_file_link(path: Path | str | None, label: str | None = None) -> str:
+    """Same-folder relative markdown link for files committed alongside REPORT.md."""
+    if path is None:
+        return "n/a"
+    name = path.name if isinstance(path, Path) else str(path)
+    text = label if label is not None else name
+    return f"[{text}]({name})"
+
+
+def evidence_stage_label(filename: str) -> str:
+    """Short human label derived from SWIM evidence filename suffix."""
+    markers = (
+        ("-00_compliance_pre_post.json", "Combined pre/post compliance"),
+        ("-00_post_activate.json", "Post-activate compliance"),
+        ("-00_preflight.json", "Pre-upgrade compliance"),
+        ("-10_import_and_tag.json", "Import and golden tag"),
+        ("-20_distribute.json", "Image distribution"),
+        ("-30_activate.json", "Image activation"),
+    )
+    for suffix, label in markers:
+        if filename.endswith(suffix):
+            return label
+    return filename
+
+
 def _int_value(value: object, default: int = 0) -> int:
     try:
         return int(value)  # type: ignore[arg-type]
@@ -256,15 +281,21 @@ def main() -> int:
         lines.append("## Evidence files")
         lines.append("")
         for name in evidence_files:
-            lines.append(f"- `{name}`")
+            label = evidence_stage_label(name)
+            lines.append(f"- {label}: {md_file_link(name)}")
         lines.append("")
 
     pre_post = load_json(pre_post_path) if pre_post_path else None
     if isinstance(pre_post, dict) and pre_post.get("phase") == "pre-post":
         lines.append("## Compliance overview")
         lines.append("")
-        lines.append(f"- **Pre-upgrade run:** `{pre_post.get('pre_run_id', 'n/a')}`")
-        lines.append(f"- **Post-activate run:** `{pre_post.get('post_run_id', 'n/a')}`")
+        lines.append(
+            f"- **Pre-upgrade run:** {md_file_link(preflight_path, str(pre_post.get('pre_run_id', 'n/a')))}"
+        )
+        post_evidence = pre_post_path or post_path
+        lines.append(
+            f"- **Post-activate run:** {md_file_link(post_evidence, str(pre_post.get('post_run_id', 'n/a')))}"
+        )
         lines.append("")
         pre_totals = pre_post.get("pre_upgrade", {}).get("totals", {})
         post_totals = pre_post.get("post_activate", {}).get("totals", {})
@@ -317,10 +348,12 @@ def main() -> int:
                     lines.append("")
                     lines.extend(render_device_pre_only_table(site))
             else:
-                lines.append(f"- Source: `{preflight_path.name}` (no site rows parsed)")
+                lines.append(
+                    f"- Source: {md_file_link(preflight_path)} (no site rows parsed)"
+                )
                 lines.append("")
         else:
-            lines.append(f"- Source: `{preflight_path.name}`")
+            lines.append(f"- Source: {md_file_link(preflight_path)}")
             lines.append("")
     else:
         lines.append("## Compliance overview")
@@ -329,7 +362,7 @@ def main() -> int:
         lines.append("")
 
     if post_path and not pre_post_path:
-        lines.append(f"- Post-activate evidence: `{post_path.name}`")
+        lines.append(f"- Post-activate evidence: {md_file_link(post_path)}")
         lines.append("")
 
     manifest = {
