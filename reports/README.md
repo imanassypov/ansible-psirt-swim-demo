@@ -4,7 +4,9 @@ Evidence and summaries from the **SWIM PSIRT Pipeline** GitHub Actions workflow
 (triggered when `Settings/settings.json` at the repo root changes).
 
 Each successful run adds one subdirectory named `{run-number}-{run-id}/`. Only the
-latest run is kept on `master`; older run folders are removed on the next commit.
+latest successful run is kept on `master`; older run folders are removed on the
+next commit. Failed pipeline runs do not publish a report, so the last good one
+stays in place.
 
 ## Run folder contents
 

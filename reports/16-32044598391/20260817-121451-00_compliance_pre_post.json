@@ -1,0 +1,117 @@
+{
+    "phase": "pre-post",
+    "post_activate": {
+        "sites": [
+            {
+                "compliant": 6,
+                "devices": [
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-02",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-06",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-03",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-04",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-01",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-05",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    }
+                ],
+                "non_compliant": 0,
+                "site": "{site-hierarchy}",
+                "skipped_devices": [],
+                "task_failed": false,
+                "total_checked": 6
+            }
+        ],
+        "totals": {
+            "compliant": "6",
+            "non_compliant": "0",
+            "total_checked": "6"
+        }
+    },
+    "post_run_id": "20260817-121451",
+    "pre_run_id": "20260817-121152",
+    "pre_upgrade": {
+        "sites": [
+            {
+                "compliant": 6,
+                "devices": [
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-01",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-02",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-03",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-04",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-05",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    },
+                    {
+                        "configured_image": "n/a",
+                        "device": "device-06",
+                        "intended_image": "n/a",
+                        "status": "COMPLIANT"
+                    }
+                ],
+                "non_compliant": 0,
+                "site": "{site-hierarchy}",
+                "skipped_devices": [],
+                "task_failed": false,
+                "total_checked": 6
+            }
+        ],
+        "totals": {
+            "compliant": "6",
+            "non_compliant": "0",
+            "total_checked": "6"
+        }
+    },
+    "skipped_devices": [],
+    "stage": "validate_compliance"
+}
