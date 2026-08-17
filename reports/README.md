@@ -23,5 +23,7 @@ lab IPs, site hierarchy names, device UUIDs) and verified by
 `verify-report-artifacts.sh`.
 
 Successful runs are **auto-committed** to this repo (`commit-reports.sh`) as
-`reports/{run-number}-{run-id}/`. Source evidence JSON is written first to
-`ansible/logs/` (gitignored), then copied here for audit-friendly summaries.
+`reports/{run-number}-{run-id}/`. Only the **latest** run directory is kept on
+`master`; older run folders are removed when a new report is committed. Source
+evidence JSON is written first to `ansible/logs/` (gitignored), then copied here
+for audit-friendly summaries.

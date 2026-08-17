@@ -24,6 +24,20 @@ bash "${SWIM_LAB_ROOT}/scripts/verify-report-artifacts.sh" "$REPORT_DIR"
 
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+# Keep only the current run on master — remove previously committed run folders.
+while IFS= read -r -d '' old_dir; do
+  old_label="$(basename "$old_dir")"
+  [[ "$old_label" =~ ^[0-9]+-[0-9]+$ ]] || continue
+  [[ "$old_label" == "$RUN_LABEL" ]] && continue
+  if git ls-files --error-unmatch "$old_dir" >/dev/null 2>&1; then
+    git rm -rf "$old_dir"
+  else
+    rm -rf "$old_dir"
+  fi
+  ci_log "Removed stale report directory reports/${old_label}/"
+done < <(find reports -mindepth 1 -maxdepth 1 -type d -print0)
+
 git add "$REPORT_DIR"
 
 if git diff --cached --quiet; then

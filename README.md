@@ -446,7 +446,7 @@ automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workfl
 
 Evidence JSON from `ansible/logs/` is copied into `reports/{run-number}-{run-id}/`,
 sanitized (local paths, lab IPs, site names, device UUIDs), verified, and
-auto-committed by CI. See [`reports/README.md`](reports/README.md).
+auto-committed by CI (latest run only on `master`). See [`reports/README.md`](reports/README.md).
 
 ### Self-hosted runner setup
 
