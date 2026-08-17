@@ -110,10 +110,10 @@ def build_ip_map(payloads: list[Any], ctx: SanitizeContext) -> None:
 def replace_paths(text: str, ctx: SanitizeContext) -> str:
     for literal in (ctx.lab_root, ctx.repo_root, ctx.home_root):
         if literal:
-            text = text.replace(literal, "<lab-root>" if literal == ctx.lab_root else "<repo>" if literal == ctx.repo_root else "<home>")
-    text = ABS_UNIX_PATH_RE.sub("<path>", text)
-    text = re.sub(r"/Users/[^\s\"'`,\]})]+", "<home>", text)
-    text = re.sub(r"/home/[^\s\"'`,\]})]+", "<home>", text)
+            text = text.replace(literal, "{lab-root}" if literal == ctx.lab_root else "{repo}" if literal == ctx.repo_root else "{home}")
+    text = ABS_UNIX_PATH_RE.sub("{path}", text)
+    text = re.sub(r"/Users/[^\s\"'`,\]})]+", "{home}", text)
+    text = re.sub(r"/home/[^\s\"'`,\]})]+", "{home}", text)
     return text
 
 
@@ -122,11 +122,11 @@ def sanitize_string(text: str, ctx: SanitizeContext) -> str:
         return text
 
     text = replace_paths(text, ctx)
-    text = re.sub(r"\b198\.18\.\d+\.\d+\b", "<image-server>", text)
-    text = URL_WITH_IP_RE.sub(r"http://<image-server>\1", text)
-    text = SITE_HIERARCHY_RE.sub("<site-hierarchy>", text)
-    text = UUID_RE.sub("<device-id>", text)
-    text = MAC_RE.sub("<mac>", text)
+    text = re.sub(r"\b198\.18\.\d+\.\d+\b", "{image-server}", text)
+    text = URL_WITH_IP_RE.sub(r"http://{image-server}\1", text)
+    text = SITE_HIERARCHY_RE.sub("{site-hierarchy}", text)
+    text = UUID_RE.sub("{device-id}", text)
+    text = MAC_RE.sub("{mac}", text)
 
     for ip, alias in sorted(ctx.ip_map.items(), key=lambda item: len(item[0]), reverse=True):
         text = text.replace(ip, alias)

@@ -25,6 +25,9 @@ FORBIDDEN_PATTERNS=(
   '-----BEGIN'
 )
 
+# Angle-bracket placeholders (e.g. <site-hierarchy>) break GitHub markdown rendering.
+HTML_LIKE_PLACEHOLDER_RE='<[a-z][a-z0-9-]*>'
+
 violations=0
 while IFS= read -r -d '' file; do
   for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
@@ -38,6 +41,10 @@ while IFS= read -r -d '' file; do
       violations=$((violations + 1))
     fi
   done
+  if [[ "$file" == *.md ]] && grep -Eq -- "$HTML_LIKE_PLACEHOLDER_RE" "$file"; then
+    echo "ERROR: HTML-like placeholder (breaks GitHub rendering) in ${file#"${REPORT_DIR}/"}" >&2
+    violations=$((violations + 1))
+  fi
 done < <(find "$REPORT_DIR" -type f \( -name '*.json' -o -name '*.md' \) -print0)
 
 if [[ "$violations" -gt 0 ]]; then

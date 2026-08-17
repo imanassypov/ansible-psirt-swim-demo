@@ -444,7 +444,7 @@ automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workfl
 | 4 | `01.3_swim_activate.yml` | Activate (reloads devices) |
 | 5 | `00.2_swim_validate_compliance.yml -e post_activate=true` | Post-activation check + pre/post report |
 
-Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`,
+Evidence JSON from `ansible/logs/` is copied into `reports/{run-number}-{run-id}/`,
 sanitized (local paths, lab IPs, site names, device UUIDs), verified, and
 auto-committed by CI. See [`reports/README.md`](reports/README.md).
 

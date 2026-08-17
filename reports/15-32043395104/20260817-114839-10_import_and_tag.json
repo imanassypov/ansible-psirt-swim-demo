@@ -16,7 +16,7 @@
                                 {
                                     "is_third_party": false,
                                     "source_url": [
-                                        "http://<image-server>/images/cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin"
+                                        "http://{image-server}/images/cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin"
                                     ]
                                 }
                             ]
@@ -40,7 +40,7 @@
                                 {
                                     "is_third_party": false,
                                     "source_url": [
-                                        "http://<image-server>/images/cat9kv-universalk9.17.15.03.SPA.bin"
+                                        "http://{image-server}/images/cat9kv-universalk9.17.15.03.SPA.bin"
                                     ]
                                 }
                             ]
@@ -64,12 +64,12 @@
                 "diff": [],
                 "failed": false,
                 "item": {
-                    "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin @ <site-hierarchy>",
+                    "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin @ {site-hierarchy}",
                     "tagging_details": {
                         "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
                         "device_role": "ALL",
                         "image_name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
-                        "site_name": "<site-hierarchy>",
+                        "site_name": "{site-hierarchy}",
                         "tagging": true
                     }
                 },

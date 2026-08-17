@@ -24,11 +24,11 @@
 
 | Site | Pre compliant | Pre non-compliant | Pre checked | Post compliant | Post non-compliant | Post checked |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| <site-hierarchy> | 6 | 0 | 6 | 6 | 0 | 6 |
+| {site-hierarchy} | 6 | 0 | 6 | 6 | 0 | 6 |
 
 ## Device details by site
 
-### <site-hierarchy>
+### {site-hierarchy}
 
 | Device | Pre status | Pre configured | Pre intended | Post status | Post configured | Post intended | Outcome |
 | --- | --- | --- | --- | --- | --- | --- | --- |

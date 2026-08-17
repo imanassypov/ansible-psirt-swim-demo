@@ -4,7 +4,7 @@ This directory holds evidence and summaries produced when
 [`Settings/settings.json`](../Settings/settings.json) changes and the GitHub Actions
 **SWIM PSIRT Pipeline** workflow runs.
 
-Each workflow run creates a subdirectory named `<run-number>-<run-id>/` containing:
+Each workflow run creates a subdirectory named `{run-number}-{run-id}/` containing:
 
 | File | Description |
 |---|---|
@@ -23,5 +23,5 @@ lab IPs, site hierarchy names, device UUIDs) and verified by
 `verify-report-artifacts.sh`.
 
 Successful runs are **auto-committed** to this repo (`commit-reports.sh`) as
-`reports/<run-number>-<run-id>/`. Source evidence JSON is written first to
+`reports/{run-number}-{run-id}/`. Source evidence JSON is written first to
 `ansible/logs/` (gitignored), then copied here for audit-friendly summaries.

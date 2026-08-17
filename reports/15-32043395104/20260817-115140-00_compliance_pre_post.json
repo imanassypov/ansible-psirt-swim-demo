@@ -43,7 +43,7 @@
                     }
                 ],
                 "non_compliant": 0,
-                "site": "<site-hierarchy>",
+                "site": "{site-hierarchy}",
                 "skipped_devices": [],
                 "task_failed": false,
                 "total_checked": 6
@@ -100,7 +100,7 @@
                     }
                 ],
                 "non_compliant": 0,
-                "site": "<site-hierarchy>",
+                "site": "{site-hierarchy}",
                 "skipped_devices": [],
                 "task_failed": false,
                 "total_checked": 6
