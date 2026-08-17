@@ -697,7 +697,7 @@ ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 | `Attempting to decrypt but no vault secrets found` | `.vault_pass` missing or unreadable | Recreate it at the repo root; `ansible.cfg` points at `../.vault_pass` |
 | rsync restarts repeatedly in 00.1 | Low-MTU VPN path | Expected — the role retries with resume. Tune `image_rsync_retries` / `image_rsync_timeout`. |
 | Post-activation 00.2 still reports `NON_COMPLIANT` or skips devices | Devices not fully back online after reload | Post-activate mode polls reachability first (`activation.wait_for_reachability`, default true). Raise `reachability_poll_timeout` (default 600s) or `reachability_poll_interval` (default 60s), or re-run with `-e post_activate=true` after inventory settles. |
-| Post-activate reachability poll timed out | Devices still reloading or not Managed in CatC | Check Catalyst Center inventory for the site; increase `activation.reachability_poll_timeout`. Poll attempt count is derived from timeout ÷ interval. |
+| Post-activate reachability poll timed out | Devices still reloading or not Managed in CatC | Check Catalyst Center inventory for the site; increase `activation.reachability_poll_timeout`. Poll attempt count is derived from timeout ÷ interval (values are coerced to integers in the poll loop). |
 | `No pre-upgrade baseline found in logs/` | post_activate run before a default 00.2 | Run 00.2 without extra-vars first, or pass `-e preflight_run_id=<run_id>` |
 
 ---

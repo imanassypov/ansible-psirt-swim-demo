@@ -23,11 +23,7 @@
 
     - name: Compute reachability poll attempt count
       ansible.builtin.set_fact:
-        _reachability_poll_attempts: >-
-          {{ (
-               (_reachability_poll_timeout | int)
-               // (_reachability_poll_interval | int)
-             ) | int }}
+        _reachability_poll_attempts: "{{ ((_reachability_poll_timeout | int) // (_reachability_poll_interval | int)) | int }}"
 
     - name: Initialise reachability poll state
       ansible.builtin.set_fact:
@@ -36,10 +32,10 @@
 
     - name: Wait for all target site devices to become reachable
       ansible.builtin.include_tasks: poll_site_reachability_once.yml
-      loop: "{{ range(1, _reachability_poll_attempts + 1) | list }}"
+      loop: "{{ range(1, (_reachability_poll_attempts | int) + 1) | list }}"
       loop_control:
-        pause: "{{ _reachability_poll_interval }}"
-        label: "poll attempt {{ item }}/{{ _reachability_poll_attempts }}"
+        pause: "{{ _reachability_poll_interval | int }}"
+        label: "poll attempt {{ item }}/{{ _reachability_poll_attempts | int }}"
       when: not (swim_reachability_all_ready | default(false) | bool)
 
     - name: Fail when devices remain unreachable after poll timeout
