@@ -56,16 +56,17 @@
     catalystcenter_port: "{{ catalystcenter_port }}"
     catalystcenter_version: "{{ catalystcenter_version }}"
     validate_response_schema: "{{ validate_response_schema }}"
-    id: "{{ item }}"
+    id: "{{ reachability_device_id }}"
   loop: "{{ _reachability_device_ids }}"
   loop_control:
-    label: "{{ item }}"
+    loop_var: reachability_device_id
+    label: "{{ reachability_device_id }}"
   register: reachability_device_states
   when: _reachability_device_ids | length > 0
 
 - name: Accumulate devices not yet reachable/managed
   vars:
-    _device: "{{ item.catalystcenter_response.response | default({}) }}"
+    _device: "{{ reachability_device_result.catalystcenter_response.response | default({}) }}"
     _device_ip: "{{ _device.managementIpAddress | default(_device.hostname | default('unknown')) }}"
     # Post-reload gate: wait until CatC reports Reachable (UI green). Do not
     # require collectionStatus Managed — devices often stay "Partial Collection
@@ -79,8 +80,9 @@
     _reachability_pending_ips: "{{ _reachability_pending_ips + ([] if _device_ready else [_device_ip]) }}"
   loop: "{{ reachability_device_states.results | default([]) }}"
   loop_control:
+    loop_var: reachability_device_result
     label: "{{ _device_ip }} (reach={{ _device.reachabilityStatus | default('unknown') }}, coll={{ _device.collectionStatus | default('unknown') }})"
   when:
     - _reachability_device_ids | length > 0
-    - item.catalystcenter_response.response is defined
-    - not item.skipped | default(false)
+    - reachability_device_result.catalystcenter_response.response is defined
+    - not reachability_device_result.skipped | default(false)

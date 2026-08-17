@@ -196,7 +196,7 @@ ansible-psirt-swim-demo/
     │   │   ├── validate_compliance.yml   # pre-upgrade + post-activate compliance modes
     │   │   ├── wait_for_site_reachability.yml  # post-activate: poll until devices Reachable
     │   │   ├── poll_site_reachability_once.yml
-    │   │   ├── assess_site_reachability.yml
+    │   │   ├── assess_site_reachability.yml    # per-site device reachability (dedicated loop_var)
     │   │   ├── build_compliance_site_reports.yml
     │   │   ├── preflight.yml           # alias → validate_compliance.yml
     │   │   ├── import_and_tag.yml      # remote-URL import + golden tag
