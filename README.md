@@ -60,7 +60,7 @@ The point of the demo: **the advisory response becomes a code change**
 | Stage | Playbook | Disruptive? | Purpose |
 |---|---|---|---|
 | 00.1 | `00.1_swim_deploy_image_server.yml` | No | Stands up nginx on an Ubuntu host and stages the `.bin` images so CatC can pull them by URL. |
-| 00.2 | `00.2_swim_validate_compliance.yml` | No | Pre-upgrade IMAGE compliance baseline (default). With `-e post_activate=true`, runs post-activation check and prints a combined pre/post report. |
+| 00.2 | `00.2_swim_validate_compliance.yml` | No | Pre-upgrade IMAGE compliance baseline (default). With `-e post_activate=true`, polls CatC reachability then runs post-activation check and prints a combined pre/post report. |
 | 01.1 | `01.1_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository and marks the upgrade image **Golden**. |
 | 01.2 | `01.2_swim_distribute.yml` | No | Copies the golden image to each device's flash. Run ahead of the window. |
 | 01.3 | `01.3_swim_activate.yml` | **YES — reloads devices** | Activates the golden image. Maintenance window only. |
@@ -189,6 +189,9 @@ ansible-psirt-swim-demo/
     │   │   ├── main.yml                # dispatcher — include_tasks "{{ swim_action }}.yml"
     │   │   ├── load_swim_details.yml   # ★ reads settings.json → synthesises swim_details
     │   │   ├── validate_compliance.yml   # pre-upgrade + post-activate compliance modes
+    │   │   ├── wait_for_site_reachability.yml  # post-activate: poll until devices Reachable
+    │   │   ├── poll_site_reachability_once.yml
+    │   │   ├── assess_site_reachability.yml
     │   │   ├── build_compliance_site_reports.yml
     │   │   ├── preflight.yml           # alias → validate_compliance.yml
     │   │   ├── import_and_tag.yml      # remote-URL import + golden tag

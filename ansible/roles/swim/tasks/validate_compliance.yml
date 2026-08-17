@@ -30,7 +30,7 @@
          | unique | list }}
 
 - name: Wait for site device reachability before post-activate compliance
-  ansible.builtin.import_tasks: wait_for_site_reachability.yml
+  ansible.builtin.include_tasks: wait_for_site_reachability.yml
   when: swim_validate_post_activate | bool
 
 - name: Resync devices at target sites to refresh inventory state
