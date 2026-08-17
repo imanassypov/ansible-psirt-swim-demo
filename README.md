@@ -134,12 +134,17 @@ ansible-psirt-swim-demo/
 ├── scripts/
 │   ├── check-readme-sync.sh            # validates README matches repo structure
 │   ├── collect-swim-reports.sh         # copies evidence JSON into reports/
+│   ├── sanitize-report-artifacts.py    # redacts paths/IPs/site names before commit
+│   ├── verify-report-artifacts.sh      # fails if forbidden patterns remain in reports/
 │   ├── install-git-hooks.sh            # installs pre-commit README sync hook
 │   ├── render-swim-report.py           # builds REPORT.md from compliance evidence
 │   ├── setup-actions-runner.sh         # installs .github/actions-runner/ (gitignored)
 │   ├── fix-runner-workdir.sh           # move _work out of paths with spaces
 │   ├── ensure-actions-runner.sh        # start runner if not already running
 │   └── ci/                             # workflow scripts (prepare, run, commit)
+│       ├── commit-reports.sh           # verify + commit sanitized reports/<run>/
+│       ├── prepare-job.sh
+│       ├── run-swim-pipeline.sh
 │       └── lib/log.sh                  # redacts local paths from CI log output
 ├── .cursor/
 │   ├── rules/readme-sync.mdc           # agent policy — keep README current
@@ -154,7 +159,7 @@ ansible-psirt-swim-demo/
 │   ├── settings.json                   # ★ THE DATA MODEL — the only file you edit for a demo
 │   └── readme.md                       # field-by-field schema reference
 │
-├── reports/                            # CI-generated evidence + REPORT.md (gitignored except README)
+├── reports/                            # CI-generated, sanitized evidence + REPORT.md (auto-committed)
 │   └── README.md
 │
 └── ansible/
@@ -439,9 +444,9 @@ automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workfl
 | 4 | `01.3_swim_activate.yml` | Activate (reloads devices) |
 | 5 | `00.2_swim_validate_compliance.yml -e post_activate=true` | Post-activation check + pre/post report |
 
-Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`
-and a `REPORT.md` summary is generated on the runner (gitignored). See
-[`reports/README.md`](reports/README.md).
+Evidence JSON from `ansible/logs/` is copied into `reports/<run-number>-<run-id>/`,
+sanitized (local paths, lab IPs, site names, device UUIDs), verified, and
+auto-committed by CI. See [`reports/README.md`](reports/README.md).
 
 ### Self-hosted runner setup
 
@@ -558,8 +563,10 @@ no linking step is required.
 **Log redaction:** all CI scripts source `scripts/ci/lib/log.sh`, which replaces
 local paths with placeholders (`<lab-root>`, `<home>`, `<workspace>`) before
 writing to stdout/stderr. Ansible playbook output is piped through the same
-filter. Evidence JSON already redacts paths via the swim role's
-`write_evidence.yml`.
+filter. Evidence JSON redacts paths via the swim role's `write_evidence.yml`.
+Before reports are committed, `sanitize-report-artifacts.py` replaces lab IPs,
+site hierarchy names, and UUIDs with generic placeholders; `verify-report-artifacts.sh`
+blocks the commit if forbidden patterns remain.
 
 If the prepare step fails, complete [Installation](#installation) and run
 `./scripts/fix-runner-workdir.sh --restart`.

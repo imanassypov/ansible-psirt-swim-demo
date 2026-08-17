@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Commit generated reports (no local paths in log output).
-# Note: reports/* is gitignored; this script is retained for manual use only
-# (git add -f reports/...) if you need to force-commit artifacts.
+# Sanitize, verify, and commit the current workflow's report directory only.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,9 +8,23 @@ source "${SCRIPT_DIR}/lib/log.sh"
 
 ci_cd_lab
 
+RUN_LABEL="${GITHUB_RUN_NUMBER:-}-${GITHUB_RUN_ID:-}"
+if [[ -z "${GITHUB_RUN_NUMBER:-}" || -z "${GITHUB_RUN_ID:-}" ]]; then
+  ci_log "ERROR: GITHUB_RUN_NUMBER and GITHUB_RUN_ID are required."
+  exit 1
+fi
+
+REPORT_DIR="reports/${RUN_LABEL}"
+if [[ ! -d "$REPORT_DIR" ]]; then
+  ci_log "No report directory for this run; nothing to commit."
+  exit 0
+fi
+
+bash "${SWIM_LAB_ROOT}/scripts/verify-report-artifacts.sh" "$REPORT_DIR"
+
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-git add reports/
+git add "$REPORT_DIR"
 
 if git diff --cached --quiet; then
   ci_log "No new report artifacts to commit."
@@ -20,9 +32,10 @@ if git diff --cached --quiet; then
 fi
 
 git commit -m "$(cat <<EOF
-chore(reports): SWIM pipeline evidence for settings.json change
+chore(reports): SWIM pipeline evidence for run ${GITHUB_RUN_NUMBER}
 
-Workflow run: ${GITHUB_RUN_NUMBER}
+Sanitized report artifacts (no local paths or customer identifiers).
+Workflow run: ${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}
 Commit: ${GITHUB_SHA}
 EOF
 )"

@@ -32,6 +32,7 @@ jobs:
         run: bash "${SWIM_LAB_ROOT}/scripts/ci/run-swim-pipeline.sh"
 
       - name: Collect reports
+        id: collect
         if: always() && steps.prepare.outcome == 'success' && steps.swim.outcome != 'cancelled' && steps.swim.outcome != 'skipped'
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -41,4 +42,12 @@ jobs:
           bash "${SWIM_LAB_ROOT}/scripts/collect-swim-reports.sh" \
             "${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}" \
             "${{ steps.prepare.outputs.start_epoch }}"
+
+      - name: Commit reports
+        if: always() && steps.collect.outcome == 'success'
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash "${SWIM_LAB_ROOT}/scripts/ci/commit-reports.sh"
 

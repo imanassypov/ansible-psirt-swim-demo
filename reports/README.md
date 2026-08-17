@@ -17,6 +17,11 @@ Each workflow run creates a subdirectory named `<run-number>-<run-id>/` containi
 | `*-20_distribute.json` | Distribution evidence |
 | `*-30_activate.json` | Activation evidence |
 
-Run output is written here by the workflow (`collect-swim-reports.sh`) but is
-**gitignored** — only this README is tracked. Raw runtime logs remain in
-`ansible/logs/` (also gitignored).
+Run output is written here by the workflow (`collect-swim-reports.sh`) after
+each pipeline run. Before commit, artifacts are **sanitized** (local paths,
+lab IPs, site hierarchy names, device UUIDs) and verified by
+`verify-report-artifacts.sh`.
+
+Successful runs are **auto-committed** to this repo (`commit-reports.sh`) as
+`reports/<run-number>-<run-id>/`. Source evidence JSON is written first to
+`ansible/logs/` (gitignored), then copied here for audit-friendly summaries.

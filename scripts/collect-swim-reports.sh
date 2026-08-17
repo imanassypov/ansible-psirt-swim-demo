@@ -51,4 +51,7 @@ fi
 
 python3 "$REPO_ROOT/scripts/render-swim-report.py" "$DEST"
 
+python3 "$REPO_ROOT/scripts/sanitize-report-artifacts.py" "$DEST"
+bash "$REPO_ROOT/scripts/verify-report-artifacts.sh" "$DEST"
+
 log "Collected ${copied} evidence file(s) into reports/${RUN_LABEL}/"
