@@ -2,6 +2,9 @@
 # =============================================================================
 # swim / assess_site_reachability.yml — check one site (reachability_site_name)
 # =============================================================================
+# Info modules (sites_info, network_devices_assigned_to_site_info,
+# network_device_info) do not accept catalystcenter_log* params — connection
+# only below.
 
 - name: Resolve site UUID for reachability poll
   cisco.catalystcenter.sites_info:
@@ -11,10 +14,6 @@
     catalystcenter_verify: "{{ catalystcenter_verify }}"
     catalystcenter_port: "{{ catalystcenter_port }}"
     catalystcenter_version: "{{ catalystcenter_version }}"
-    catalystcenter_log: "{{ catalystcenter_log }}"
-    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
-    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
-    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
     validate_response_schema: "{{ validate_response_schema }}"
     nameHierarchy: "{{ reachability_site_name }}"
   register: reachability_site_lookup
@@ -34,10 +33,6 @@
     catalystcenter_verify: "{{ catalystcenter_verify }}"
     catalystcenter_port: "{{ catalystcenter_port }}"
     catalystcenter_version: "{{ catalystcenter_version }}"
-    catalystcenter_log: "{{ catalystcenter_log }}"
-    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
-    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
-    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
     validate_response_schema: "{{ validate_response_schema }}"
     siteId: "{{ reachability_site_lookup.catalystcenter_response.response[0].id }}"
     offset: 1
@@ -60,10 +55,6 @@
     catalystcenter_verify: "{{ catalystcenter_verify }}"
     catalystcenter_port: "{{ catalystcenter_port }}"
     catalystcenter_version: "{{ catalystcenter_version }}"
-    catalystcenter_log: "{{ catalystcenter_log }}"
-    catalystcenter_log_level: "{{ catalystcenter_log_level }}"
-    catalystcenter_log_file_path: "{{ catalystcenter_log_file_path }}"
-    catalystcenter_log_append: "{{ catalystcenter_log_append }}"
     validate_response_schema: "{{ validate_response_schema }}"
     id: "{{ item }}"
   loop: "{{ _reachability_device_ids }}"
@@ -76,18 +67,19 @@
   vars:
     _device: "{{ item.catalystcenter_response.response | default({}) }}"
     _device_ip: "{{ _device.managementIpAddress | default(_device.hostname | default('unknown')) }}"
+    # Post-reload gate: wait until CatC reports Reachable (UI green). Do not
+    # require collectionStatus Managed — devices often stay "Partial Collection
+    # Failure" while reachable; compliance applies its own skip rules later.
     _device_ready: >-
       {{
         (_device.family | default('') != 'Unified AP')
         and (_device.reachabilityStatus | default('') == 'Reachable')
-        and (_device.collectionStatus | default('') in ['Managed', 'In Progress'])
       }}
   ansible.builtin.set_fact:
-    _reachability_pending_ips: >-
-      {{ _reachability_pending_ips + ([] if _device_ready else [_device_ip]) }}
+    _reachability_pending_ips: "{{ _reachability_pending_ips + ([] if _device_ready else [_device_ip]) }}"
   loop: "{{ reachability_device_states.results | default([]) }}"
   loop_control:
-    label: "{{ _device_ip }}"
+    label: "{{ _device_ip }} (reach={{ _device.reachabilityStatus | default('unknown') }}, coll={{ _device.collectionStatus | default('unknown') }})"
   when:
     - _reachability_device_ids | length > 0
     - item.catalystcenter_response.response is defined
