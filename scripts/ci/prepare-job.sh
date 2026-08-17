@@ -25,7 +25,9 @@ if [[ "${SWIM_PREPARE_PHASE:-}" != "post-sync" ]]; then
 
   # CI helpers track origin/master so a settings.json commit at an older SHA
   # does not run a stale in-memory prepare script against a reset tree.
+  # Unstage them so they never ride along in a later report commit.
   git checkout origin/master -- scripts/ci/
+  git reset -q HEAD -- scripts/ci/
 
   export SWIM_PREPARE_PHASE=post-sync
   exec bash "${SWIM_LAB_ROOT}/scripts/ci/prepare-job.sh"

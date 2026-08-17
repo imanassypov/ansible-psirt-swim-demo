@@ -25,6 +25,12 @@ bash "${SWIM_LAB_ROOT}/scripts/verify-report-artifacts.sh" "$REPORT_DIR"
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+# The pipeline runs at the trigger SHA, which may trail master (e.g. re-runs of
+# an older run). Rebase onto the remote tip so the report commit fast-forwards.
+# Untracked artifacts for this run survive the forced checkout.
+git fetch -q origin master
+git checkout -q -f -B master origin/master
+
 # Keep only the current run on master — remove previously committed run folders.
 while IFS= read -r -d '' old_dir; do
   old_label="$(basename "$old_dir")"
@@ -53,10 +59,6 @@ Workflow run: ${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ID}
 Commit: ${GITHUB_SHA}
 EOF
 )"
-
-if [[ "$(git rev-parse --abbrev-ref HEAD)" == "HEAD" ]]; then
-  git checkout -q master
-fi
 
 git push origin HEAD:master
 ci_log "Reports committed and pushed for workflow run ${GITHUB_RUN_NUMBER}."
