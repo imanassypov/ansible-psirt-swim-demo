@@ -1,29 +1,21 @@
 # SWIM Pipeline Reports
 
-This directory holds evidence and summaries produced when
-[`Settings/settings.json`](../Settings/settings.json) changes and the GitHub Actions
-**SWIM PSIRT Pipeline** workflow runs.
+Evidence and summaries from the **SWIM PSIRT Pipeline** GitHub Actions workflow
+(triggered when `Settings/settings.json` at the repo root changes).
 
-Each workflow run creates a subdirectory named `{run-number}-{run-id}/` containing:
+Each successful run adds one subdirectory named `{run-number}-{run-id}/`. Only the
+latest run is kept on `master`; older run folders are removed on the next commit.
 
-| File | Description |
-|---|---|
-| `REPORT.md` | Human-readable compliance summary with links to evidence JSON in the same folder |
-| `manifest.json` | Index of evidence files in the run |
-| `*-00_preflight.json` | Pre-upgrade IMAGE compliance baseline |
-| `*-00_post_activate.json` | Post-activation compliance check |
-| `*-00_compliance_pre_post.json` | Combined pre/post compliance summary |
-| `*-10_import_and_tag.json` | Import + golden tag evidence |
-| `*-20_distribute.json` | Distribution evidence |
-| `*-30_activate.json` | Activation evidence |
+## Run folder contents
 
-Run output is written here by the workflow (`collect-swim-reports.sh`) after
-each pipeline run. Before commit, artifacts are **sanitized** (local paths,
-lab IPs, site hierarchy names, device UUIDs) and verified by
-`verify-report-artifacts.sh`.
+- REPORT.md — compliance summary with links to evidence JSON in the same folder
+- manifest.json — index of evidence files
+- preflight, import, distribute, activate, post-activate, and pre/post compliance JSON evidence files
 
-Successful runs are **auto-committed** to this repo (`commit-reports.sh`) as
-`reports/{run-number}-{run-id}/`. Only the **latest** run directory is kept on
-`master`; older run folders are removed when a new report is committed. Source
-evidence JSON is written first to `ansible/logs/` (gitignored), then copied here
-for audit-friendly summaries.
+## Pipeline flow
+
+1. Playbooks write evidence to `ansible/logs/` (gitignored).
+2. collect-swim-reports.sh copies artifacts into the run subdirectory under reports/.
+3. sanitize-report-artifacts.py redacts local paths, lab IPs, site names, and UUIDs.
+4. verify-report-artifacts.sh blocks forbidden patterns before commit.
+5. commit-reports.sh commits the current run and removes older run folders.
