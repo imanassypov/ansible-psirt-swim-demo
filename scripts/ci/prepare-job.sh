@@ -35,6 +35,8 @@ if ! python -c "import catalystcentersdk" 2>/dev/null; then
   exit 1
 fi
 
+bash "${SCRIPT_DIR}/check-lab-connectivity.sh"
+
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   echo "start_epoch=$(date +%s)" >> "${GITHUB_OUTPUT}"
 fi

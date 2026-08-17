@@ -143,6 +143,7 @@ ansible-psirt-swim-demo/
 │   ├── ensure-actions-runner.sh        # start runner if not already running
 │   └── ci/                             # workflow scripts (prepare, run, commit)
 │       ├── commit-reports.sh           # verify + commit sanitized reports/<run>/
+│       ├── check-lab-connectivity.sh   # fail-fast TCP check to Catalyst Center
 │       ├── prepare-job.sh
 │       ├── run-swim-pipeline.sh
 │       └── lib/log.sh                  # redacts local paths from CI log output
@@ -452,7 +453,9 @@ auto-committed by CI (latest run only on `master`). See [`reports/README.md`](re
 
 The workflow uses `runs-on: self-hosted` because Catalyst Center and the lab
 network are private (`198.18.x`). The runner must live on a host that can reach
-CatC over HTTPS and run Ansible.
+CatC over HTTPS and run Ansible. **Prepare lab job** runs a TCP connectivity
+check to `catalystcenter_host` before any playbooks — if lab VPN is down, the
+workflow fails immediately with a clear message instead of mid-playbook API errors.
 
 #### 1. Install and register the runner
 
@@ -694,6 +697,8 @@ ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 
 | Symptom | Likely cause | Resolution |
 |---|---|---|
+| CI fails in Prepare lab job: Cannot reach Catalyst Center | Lab VPN disconnected on the runner host | Connect VPN on the machine running the self-hosted runner; verify with `bash scripts/ci/check-lab-connectivity.sh` or `nc -zv <catc_host> 443` |
+| `Network is unreachable` / `ConnectionError` on CatC API token URL | Same — runner has no route to `198.18.x` | Reconnect VPN and re-run the workflow (Actions → Run workflow). No settings.json change needed. |
 | `settings.json must contain a non-empty 'project' list` | Wrong `settings_json_path`, or malformed JSON | Run with `-e catc_debug=true` and check `_resolved_json_path`; validate with `python3 -m json.tool Settings/settings.json` |
 | Each project entry must define a `swim` block | Missing `image_server_base_url` or `upgrade_image` | Add both to every `project[]` entry — SWIM validates all entries, not just the first |
 | 00.1 HTTP HEAD verification fails | nginx not serving, ufw blocking, or image not staged | `curl -I http://<image_server_ip>/images/<file>.bin` from the control node |
