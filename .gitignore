@@ -16,7 +16,8 @@ logs/
 ansible/.ansible/
 
 # Python / OS
-.venv/
+# .venv* also covers rollback copies such as .venv.bak from a Python upgrade
+.venv*/
 __pycache__/
 .DS_Store
 
