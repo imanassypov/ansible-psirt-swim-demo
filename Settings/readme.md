@@ -25,9 +25,9 @@ hardcoded in a playbook or role).
 | Field | Type | Description |
 |---|---|---|
 | `image_server_base_url` | string | Base URL Catalyst Center pulls images from. Must exactly match what stage 00.1 serves (`http://<image_server_ip>/<image_url_subdir>`). |
-| `device_family_identifier` | string | CatC *image* family name used for golden tagging (e.g. `Cisco Catalyst 9000 UADP 8 Port Virtual Switch`). |
-| `device_family_name` | string | CatC *device* family used for distribute/activate targeting (e.g. `Switches and Hubs`). |
-| `device_series_name` | string | CatC device series used for distribute/activate targeting. |
+| `device_image_family_name` | string | CatC *image* family name used for golden tagging — the "Family Name" column on the SWIM Image Families page (e.g. `Cisco Catalyst 9000 UADP 8 Port Virtual Switch`). Must match a product name the image itself declares support for. |
+| `device_family_name` | string | CatC *device* family (inventory `family` attribute) used for distribute/activate targeting (e.g. `Switches and Hubs`). A different taxonomy from `device_image_family_name` — the two are expected to differ. |
+| `device_series_name` | string | CatC device series (inventory `series` attribute) used for distribute/activate targeting (e.g. `Cisco Catalyst 9000 Series Virtual Switches`). Matched as a substring, not exactly. |
 | `device_role` | string | `ALL` \| `CORE` \| `DISTRIBUTION` \| `ACCESS` \| `BORDER ROUTER`. Narrows the blast radius. |
 | `upgrade_image` | string | `.bin` filename to import, tag Golden, distribute and activate. Set to the PSIRT-remediating image when responding to an advisory (default in repo: `cat9kv-universalk9.17.15.03.SPA.bin`; example fix build: `cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin`). |
 | `rollback_image` | string | Known-good `.bin` to return to in stage 02.1. Imported alongside `upgrade_image` in 01.1. Set to `""` to disable rollback. |

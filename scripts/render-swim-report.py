@@ -36,7 +36,7 @@ def evidence_stage_label(filename: str) -> str:
         ("-00_compliance_pre_post.json", "Combined pre/post compliance"),
         ("-00_post_activate.json", "Post-activate compliance"),
         ("-00_preflight.json", "Pre-upgrade compliance"),
-        ("-10_import_and_tag.json", "Import and golden tag"),
+        ("-10_import_and_tag.json", "Import, family assignment and golden tag"),
         ("-20_distribute.json", "Image distribution"),
         ("-30_activate.json", "Image activation"),
     )
@@ -103,6 +103,56 @@ def parse_sites_from_compliance_register(compliance_run: dict) -> list[dict]:
             }
         )
     return sites
+
+
+def describe_assignment(entry: dict) -> str:
+    """Assignment outcome for one (image, product name, site) binding."""
+    if entry.get("already_assigned"):
+        return "Already assigned"
+    if entry.get("changed"):
+        return "Assigned this run"
+    return "Not assigned"
+
+
+def render_image_preparation(evidence: dict) -> list[str]:
+    """Summarise stage 01.1: repository import, device family binding, golden tag.
+
+    The binding is what lets Catalyst Center tag an image golden and treat a
+    device as non-compliant against it, so it belongs in the audit trail
+    alongside the compliance results it drives.
+    """
+    lines = ["## Image preparation", ""]
+
+    for key, label in (("import", "Repository import"), ("tag", "Golden tag")):
+        block = evidence.get(key)
+        if not isinstance(block, dict):
+            continue
+        if block.get("skipped"):
+            state = "skipped"
+        elif block.get("changed"):
+            state = "changed"
+        else:
+            state = "no change (already in place)"
+        count = len(block.get("results") or [])
+        lines.append(f"- **{label}:** {state} — {count} image(s)")
+
+    assignments = [a for a in evidence.get("assign_product_names") or [] if isinstance(a, dict)]
+    if assignments:
+        lines.append("")
+        lines.append("### Device family assignment")
+        lines.append("")
+        lines.append("| Image | Device product name | Site | Outcome |")
+        lines.append("| --- | --- | --- | --- |")
+        for entry in assignments:
+            lines.append(
+                f"| {entry.get('image_name', 'n/a')} "
+                f"| {entry.get('product_name', 'n/a')} "
+                f"| {entry.get('site_name', 'n/a')} "
+                f"| {describe_assignment(entry)} |"
+            )
+
+    lines.append("")
+    return lines
 
 
 def format_totals(label: str, totals: dict) -> str:
@@ -267,6 +317,7 @@ def main() -> int:
     pre_post_path = newest_matching(report_dir, "*-00_compliance_pre_post.json")
     preflight_path = newest_matching(report_dir, "*-00_preflight.json")
     post_path = newest_matching(report_dir, "*-00_post_activate.json")
+    import_tag_path = newest_matching(report_dir, "*-10_import_and_tag.json")
 
     lines: list[str] = [
         "# SWIM PSIRT Pipeline Report",
@@ -284,6 +335,11 @@ def main() -> int:
             label = evidence_stage_label(name)
             lines.append(f"- {label}: {md_file_link(name)}")
         lines.append("")
+
+    if import_tag_path:
+        import_tag = load_json(import_tag_path)
+        if isinstance(import_tag, dict):
+            lines.extend(render_image_preparation(import_tag))
 
     pre_post = load_json(pre_post_path) if pre_post_path else None
     if isinstance(pre_post, dict) and pre_post.get("phase") == "pre-post":
@@ -372,6 +428,7 @@ def main() -> int:
         "compliance_pre_post": pre_post_path.name if pre_post_path else None,
         "preflight": preflight_path.name if preflight_path else None,
         "post_activate": post_path.name if post_path else None,
+        "import_and_tag": import_tag_path.name if import_tag_path else None,
     }
     (report_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"

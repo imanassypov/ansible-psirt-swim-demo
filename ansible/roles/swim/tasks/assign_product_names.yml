@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# swim / assign_product_names.yml  —  Stage 01.1: bind images to a device
+# product name (image family) per site
+# =============================================================================
+# Catalyst Center will only let an image be tagged golden once that image is
+# associated with a device product name — what the UI calls the device series,
+# and what the Image Repository lists under "Family Name". Images pulled
+# straight from cisco.com arrive already associated; images side-loaded from a
+# local file or a non-cisco.com URL land under "Imported Images" with nothing
+# assigned and must be bound explicitly.
+#
+# Stage 00.1 serves the images from a local HTTP server and the import task
+# fetches them by URL, so this project is always in the side-loaded case.
+#
+# Ref — Catalyst Center 2.3.7.x User Guide, "Manage software image assignment
+# for a device family":
+#   "After importing a software image from either your local computer or a URL
+#    (excluding cisco.com), you can assign or unassign it to an available
+#    device family. […] After assigning the image, you can mark it as a golden
+#    image."
+#
+# swim_workflow_manager cannot perform this binding — it only reads existing
+# associations to resolve a productNameOrdinal while tagging. The binding itself
+# is POST /dna/intent/api/v1/images/{imageId}/siteWiseProductNames.
+#
+# That endpoint has a dedicated resource module, images_site_wise_product_names,
+# but it is broken in cisco.catalystcenter 2.9.0 and cisco.dnac 6.46.0: the
+# action plugin stores the image ID under `image_id` and then reads `imageId`
+# when building the create payload, so the required path parameter is always
+# None and the SDK call dies with
+#   TypeError: assign_network_device_product_name_to_the_given_software_image()
+#   missing 1 required positional argument: 'image_id'
+# The POST is therefore issued directly until that is fixed upstream, which is
+# why this file needs an X-Auth-Token of its own.
+#
+# Pre:  images present in the CatC repository (import task, immediately above)
+# Post: every image bound to swim.device_image_family_name at its site, so the
+#       golden tag task that follows has a family to tag against
+# =============================================================================
+
+- name: Reset product name assignment evidence
+  ansible.builtin.set_fact:
+    assign_product_name_results: []
+
+- name: Obtain a Catalyst Center auth token for the product name bindings
+  ansible.builtin.uri:
+    url: "https://{{ catalystcenter_host }}:{{ catalystcenter_port }}/dna/system/api/v1/auth/token"
+    method: POST
+    url_username: "{{ catalystcenter_username }}"
+    url_password: "{{ catalystcenter_password }}"
+    force_basic_auth: true
+    validate_certs: "{{ catalystcenter_verify | bool }}"
+    status_code: 200
+  register: assign_token
+  no_log: true
+  when: swim_details.product_assignments | default([]) | length > 0
+
+- name: Assign device product name to each imported image
+  ansible.builtin.include_tasks: assign_one_product_name.yml
+  loop: "{{ swim_details.product_assignments | default([]) }}"
+  loop_control:
+    loop_var: assignment
+    label: "{{ assignment.name }}"

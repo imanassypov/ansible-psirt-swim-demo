@@ -25,7 +25,7 @@ _run_playbook() {
 _run_playbook "Stage 00.2 — pre-upgrade compliance" \
   playbooks/00.2_swim_validate_compliance.yml
 
-_run_playbook "Stage 01.1 — import and golden tag" \
+_run_playbook "Stage 01.1 — import, assign device family, golden tag" \
   playbooks/01.1_swim_import_and_tag.yml
 
 _run_playbook "Stage 01.2 — distribute to flash" \

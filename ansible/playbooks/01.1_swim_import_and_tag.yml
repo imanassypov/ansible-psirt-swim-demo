@@ -3,8 +3,10 @@
 # 01.1_swim_import_and_tag.yml  —  Pipeline stage 01.1 (SWIM lifecycle)
 # =============================================================================
 # Imports IOS-XE images into the Catalyst Center repository over HTTP from the
-# server built in 00.1, then marks the upgrade image as Golden for the target
-# device family/role at each site. Role: swim, tasks_from: import_and_tag.
+# server built in 00.1, binds each image to its device family (required for
+# images not sourced from cisco.com), then marks the upgrade image as Golden for
+# the target device family/role at each site.
+# Role: swim, tasks_from: import_and_tag.
 #
 # Non-destructive — no device is touched; this only populates the CatC image
 # repository and sets the golden tag that 01.2/01.3 act on.
@@ -13,22 +15,25 @@
 #   settings.json → project[].swim (via swim/load_swim_details.yml):
 #     image_server_base_url    — must match what 00.1 actually serves
 #     upgrade_image            — .bin filename to import and tag golden
-#     device_family_identifier / device_family_name / device_series_name
+#     device_image_family_name / device_family_name / device_series_name
 #     device_role              — ALL | CORE | DISTRIBUTION | ACCESS | BORDER ROUTER
 #     HierarchyParent/Area/Bldg/Floor → site_name
 #   connection.yml: catalystcenter_* connection + logging params
 #   vault.yml: catc_username, catc_password
 #
 # Produced:
-#   swim_details.import_images      — remote-URL import payloads
-#   swim_details.golden_tag_images  — tagging_details{image_name, device_role,
-#                                     device_image_family_name, site_name}
-#   In Catalyst Center: images in the SWIM repository, upgrade image flagged
-#   Golden for the specified family/role/site.
+#   swim_details.import_images       — remote-URL import payloads
+#   swim_details.product_assignments — (image, device family, site) bindings
+#   swim_details.golden_tag_images   — tagging_details{image_name, device_role,
+#                                      device_image_family_name, site_name}
+#   In Catalyst Center: images in the SWIM repository, each bound to a device
+#   family, upgrade image flagged Golden for the specified family/role/site.
 #   Evidence file: ../logs/{{ swim_run_id }}-10_import_and_tag.json
 #
 # Depends on: stage 00.1 (images reachable by URL), devices assigned to sites
-# Module: cisco.catalystcenter.swim_workflow_manager
+# Modules: cisco.catalystcenter.swim_workflow_manager (import, tag),
+#          cisco.catalystcenter.images_site_wise_product_names (+ *_info,
+#          images_info, sites_info) for the device family binding
 #
 # Run: ansible-playbook playbooks/01.1_swim_import_and_tag.yml
 # =============================================================================

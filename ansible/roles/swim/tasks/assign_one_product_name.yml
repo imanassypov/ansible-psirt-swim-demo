@@ -1,0 +1,201 @@
+---
+# =============================================================================
+# swim / assign_one_product_name.yml — one (image, product name, site) binding
+# =============================================================================
+# Included once per item by assign_product_names.yml.
+#
+# Required vars (set by the caller via include_tasks):
+#   assignment.image_name   — image filename as it appears in the repository
+#   assignment.product_name — device product name / image family to bind
+#   assignment.site_name    — site hierarchy path the binding applies to
+#
+# Idempotent: the existing associations are queried first and the POST only
+# runs when this product name is not already assigned to the image, so a
+# re-run of stage 01.1 reports ok rather than changed.
+#
+# settings.json is authoritative about which product name an image belongs to —
+# CatC is not asked to validate the pairing. It only translates that name into
+# the numeric productNameOrdinal the assignment API takes, via the global
+# product name catalogue (the UI's "All Device Series"). Asking CatC which
+# products apply to a given image is useless here anyway: it derives that list
+# from cisco.com metadata and returns nothing for engineering/SSA builds.
+#
+# Info modules and the images_site_wise_product_names resource module do not
+# accept catalystcenter_log* params — connection only below, matching the
+# convention in assess_site_reachability.yml.
+# =============================================================================
+
+- name: Resolve site UUID for product name assignment
+  cisco.catalystcenter.sites_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    nameHierarchy: "{{ assignment.site_name }}"
+  register: assign_site_lookup
+
+- name: Require site to exist before assigning product name
+  ansible.builtin.assert:
+    that:
+      - assign_site_lookup.catalystcenter_response.response is defined
+      - assign_site_lookup.catalystcenter_response.response | length > 0
+    fail_msg: >-
+      Site '{{ assignment.site_name }}' not found in Catalyst Center — cannot
+      assign a device product name against it. Run the site hierarchy stage first.
+
+- name: Look up image record in the repository
+  cisco.catalystcenter.images_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    name: "{{ assignment.image_name }}"
+    imported: true
+  register: assign_image_lookup
+
+# CatC treats `name` as a partial case-insensitive filter, so narrow the result
+# set down to the record whose filename matches exactly.
+- name: Select the exact image record
+  ansible.builtin.set_fact:
+    _assign_image_id: >-
+      {{ assign_image_lookup.catalystcenter_response.response
+         | default([])
+         | selectattr('name', 'equalto', assignment.image_name)
+         | map(attribute='id')
+         | first | default('') }}
+
+- name: Require image to be present in the repository
+  ansible.builtin.assert:
+    that: _assign_image_id | length > 0
+    fail_msg: >-
+      Image '{{ assignment.image_name }}' was not found in the Catalyst Center
+      repository. Stage 01.1 imports it immediately before this step — check the
+      import task result and that stage 00.1 is still serving the file.
+
+- name: Check whether the product name is already assigned
+  cisco.catalystcenter.images_site_wise_product_names_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    imageId: "{{ _assign_image_id }}"
+    productName: "{{ assignment.product_name }}"
+    assigned: ASSIGNED
+  register: assign_existing
+
+# _assign_ordinal is reset here so a value left over from the previous loop item
+# can never be posted against this one.
+- name: Determine whether the assignment is still needed
+  ansible.builtin.set_fact:
+    _assign_ordinal: ""
+    _assign_needed: >-
+      {{ (assign_existing.catalystcenter_response.response | default([])
+          | selectattr('productName', 'equalto', assignment.product_name)
+          | list | length) == 0 }}
+
+# Name-to-ordinal translation only: the catalogue is the full list of product
+# names CatC knows about, not a judgement about this image. productName is a
+# partial case-insensitive filter, so match the exact name afterwards.
+- name: Look up the product name ordinal
+  cisco.catalystcenter.product_names_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    productName: "{{ assignment.product_name }}"
+  register: assign_catalogue
+  when: _assign_needed | bool
+
+- name: Select the matching product name ordinal
+  ansible.builtin.set_fact:
+    _assign_ordinal: >-
+      {{ assign_catalogue.catalystcenter_response.response
+         | default([])
+         | selectattr('productName', 'equalto', assignment.product_name)
+         | map(attribute='productNameOrdinal')
+         | first | default('') }}
+  when: _assign_needed | bool
+
+- name: Require the product name to exist in Catalyst Center
+  ansible.builtin.assert:
+    that: _assign_ordinal | string | length > 0
+    fail_msg: >-
+      Catalyst Center has no device product name matching
+      '{{ assignment.product_name }}'. Partial matches it does know:
+      {{ assign_catalogue.catalystcenter_response.response | default([])
+         | map(attribute='productName') | list }}.
+      Correct swim.device_image_family_name in settings.json to one of those, or
+      to the Family Name shown under Design > Image Repository.
+  when: _assign_needed | bool
+
+# body is templated as a whole dict so productNameOrdinal stays a JSON number —
+# CatC rejects it as a quoted string. See assign_product_names.yml for why this
+# is a raw POST rather than the images_site_wise_product_names module.
+- name: Assign product name to image at site
+  ansible.builtin.uri:
+    url: >-
+      https://{{ catalystcenter_host }}:{{ catalystcenter_port
+      }}/dna/intent/api/v1/images/{{ _assign_image_id }}/siteWiseProductNames
+    method: POST
+    headers:
+      X-Auth-Token: "{{ assign_token.json.Token }}"
+    body_format: json
+    body: >-
+      {{ {'productNameOrdinal': _assign_ordinal | int,
+          'siteIds': [assign_site_lookup.catalystcenter_response.response[0].id]} }}
+    validate_certs: "{{ catalystcenter_verify | bool }}"
+    status_code: [200, 202]
+  register: assign_result
+  # Ansible echoes task args back on failure and the token rides in the headers,
+  # so keep this quiet and let the verification below report the outcome.
+  no_log: true
+  when: _assign_needed | bool
+
+# The POST returns a task id rather than the finished binding, so confirm the
+# association is actually readable before the golden tag task depends on it.
+- name: Confirm the product name is now assigned
+  cisco.catalystcenter.images_site_wise_product_names_info:
+    catalystcenter_host: "{{ catalystcenter_host }}"
+    catalystcenter_username: "{{ catalystcenter_username }}"
+    catalystcenter_password: "{{ catalystcenter_password }}"
+    catalystcenter_verify: "{{ catalystcenter_verify }}"
+    catalystcenter_port: "{{ catalystcenter_port }}"
+    catalystcenter_version: "{{ catalystcenter_version }}"
+    validate_response_schema: "{{ validate_response_schema }}"
+    imageId: "{{ _assign_image_id }}"
+    productName: "{{ assignment.product_name }}"
+    assigned: ASSIGNED
+  register: assign_verify
+  until: >-
+    assign_verify.catalystcenter_response.response | default([])
+    | selectattr('productName', 'equalto', assignment.product_name)
+    | list | length > 0
+  retries: 12
+  delay: 5
+  when: _assign_needed | bool
+
+- name: Accumulate product name assignment evidence
+  ansible.builtin.set_fact:
+    assign_product_name_results: >-
+      {{ assign_product_name_results + [{
+           'name': assignment.name,
+           'image_name': assignment.image_name,
+           'product_name': assignment.product_name,
+           'site_name': assignment.site_name,
+           'product_name_ordinal': _assign_ordinal,
+           'already_assigned': (not (_assign_needed | bool)),
+           'changed': (_assign_needed | bool),
+           'response': (assign_verify.catalystcenter_response | default({}))
+         }] }}

@@ -15,6 +15,7 @@
 # playbooks already loop over:
 #
 #   swim_details.import_images       → import_and_tag.yml (import task)   [01.1]
+#   swim_details.product_assignments → assign_product_names.yml           [01.1]
 #   swim_details.golden_tag_images   → import_and_tag.yml (tag task)      [01.1]
 #   swim_details.distribute_images   → distribute.yml                     [01.2]
 #   swim_details.activate_images     → activate.yml                       [01.3]
@@ -58,7 +59,7 @@
 #              "HierarchyFloor":  "Floor 1",
 #              "swim": {
 #                "image_server_base_url":    "http://198.18.134.28/images",
-#                "device_family_identifier": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+#                "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
 #                "device_family_name":       "Switches and Hubs",
 #                "device_series_name":       "Cisco Catalyst 9000 Series Virtual Switches",
 #                "device_role":              "ALL",
@@ -110,7 +111,7 @@
 #            "HierarchyFloor":  "Floor 1",
 #            "swim": {
 #              "image_server_base_url":    "http://198.18.134.28/images",
-#              "device_family_identifier": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+#              "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
 #              "device_family_name":       "Switches and Hubs",
 #              "device_series_name":       "Cisco Catalyst 9000 Series Virtual Switches",
 #              "device_role":              "ALL",
@@ -128,7 +129,7 @@
 #          {
 #            "site_name":            "Global/PODS/POD 0/Building P0/Floor 1",
 #            "base_url":             "http://198.18.134.28/images",
-#            "family_identifier":    "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+#            "image_family_name":    "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
 #            "family_name":          "Switches and Hubs",
 #            "series_name":          "Cisco Catalyst 9000 Series Virtual Switches",
 #            "role":                 "ALL",
@@ -159,7 +160,7 @@
         {%- set rec = {
               'site_name':            sp.path,
               'base_url':             sw.image_server_base_url,
-              'family_identifier':    sw.device_family_identifier,
+              'image_family_name':    sw.device_image_family_name,
               'family_name':          sw.device_family_name,
               'series_name':          sw.device_series_name,
               'role':                 sw.device_role | default('ALL'),
@@ -184,7 +185,7 @@
 #          {
 #            "site_name":            "Global/PODS/POD 0/Building P0/Floor 1",
 #            "base_url":             "http://198.18.134.28/images",
-#            "family_identifier":    "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+#            "image_family_name":    "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
 #            "family_name":          "Switches and Hubs",
 #            "series_name":          "Cisco Catalyst 9000 Series Virtual Switches",
 #            "role":                 "ALL",
@@ -326,6 +327,23 @@
           {%- endfor -%}
         {%- endfor -%}
         {{ ns.items }}
+      product_assignments: >-
+        {%- set ns = namespace(items=[], seen=[]) -%}
+        {%- for r in _swim_records -%}
+          {%- for img in [r.upgrade_image, r.rollback_image] -%}
+            {%- set key = img ~ '|' ~ r.image_family_name ~ '|' ~ r.site_name -%}
+            {%- if img and key not in ns.seen -%}
+              {%- set ns.seen = ns.seen + [key] -%}
+              {%- set ns.items = ns.items + [{
+                    'name': img ~ ' -> ' ~ r.image_family_name ~ ' @ ' ~ r.site_name,
+                    'image_name': img,
+                    'product_name': r.image_family_name,
+                    'site_name': r.site_name
+                  }] -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        {{ ns.items }}
       golden_tag_images: >-
         {%- set ns = namespace(items=[]) -%}
         {%- for r in _swim_records -%}
@@ -334,9 +352,10 @@
                 'tagging_details': {
                   'image_name': r.upgrade_image,
                   'device_role': r.role,
-                  'device_image_family_name': r.family_identifier,
+                  'device_image_family_name': r.image_family_name,
                   'site_name': r.site_name,
-                  'tagging': true
+                  'tagging': true,
+                  'device_tags': []
                 }
               }] -%}
         {%- endfor -%}
@@ -387,9 +406,10 @@
                     'tagging_details': {
                       'image_name': r.rollback_image,
                       'device_role': r.role,
-                      'device_image_family_name': r.family_identifier,
+                      'device_image_family_name': r.image_family_name,
                       'site_name': r.site_name,
-                      'tagging': true
+                      'tagging': true,
+                      'device_tags': []
                     }
                   }] -%}
             {%- endif -%}

@@ -61,7 +61,7 @@ The point of the demo: **the advisory response becomes a code change**
 |---|---|---|---|
 | 00.1 | `00.1_swim_deploy_image_server.yml` | No | Stands up nginx on an Ubuntu host and stages the `.bin` images so CatC can pull them by URL. |
 | 00.2 | `00.2_swim_validate_compliance.yml` | No | Pre-upgrade IMAGE compliance baseline (default). With `-e post_activate=true`, polls CatC reachability then runs post-activation check and prints a combined pre/post report. |
-| 01.1 | `01.1_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository and marks the upgrade image **Golden**. |
+| 01.1 | `01.1_swim_import_and_tag.yml` | No | Imports the upgrade + rollback images into the CatC repository, binds each to its device family, then marks the upgrade image **Golden**. |
 | 01.2 | `01.2_swim_distribute.yml` | No | Copies the golden image to each device's flash. Run ahead of the window. |
 | 01.3 | `01.3_swim_activate.yml` | **YES — reloads devices** | Activates the golden image. Maintenance window only. |
 | 02.1 | `02.1_swim_rollback.yml` | **YES — reloads devices** | Emergency recovery: re-tags and activates the previous image. Double-gated. |
@@ -200,7 +200,9 @@ ansible-psirt-swim-demo/
     │   │   ├── assess_site_reachability.yml    # per-site device reachability (dedicated loop_var)
     │   │   ├── build_compliance_site_reports.yml
     │   │   ├── preflight.yml           # alias → validate_compliance.yml
-    │   │   ├── import_and_tag.yml      # remote-URL import + golden tag
+    │   │   ├── import_and_tag.yml      # remote-URL import + family assignment + golden tag
+    │   │   ├── assign_product_names.yml     # binds images to a device family (auth token + loop)
+    │   │   ├── assign_one_product_name.yml  # one (image, product name, site) binding
     │   │   ├── distribute.yml          # push image to device flash
     │   │   ├── activate.yml            # activate + reload
     │   │   ├── rollback.yml            # re-tag + activate previous image (double-gated)
@@ -328,7 +330,7 @@ Cursor agents in this repo also load `.cursor/rules/readme-sync.mdc` and a
       "HierarchyFloor":  "Floor 1",
       "swim": {
         "image_server_base_url":    "http://198.18.134.28/images",
-        "device_family_identifier": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+        "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
         "device_family_name":       "Switches and Hubs",
         "device_series_name":       "Cisco Catalyst 9000 Series Virtual Switches",
         "device_role":              "ALL",
@@ -387,7 +389,7 @@ ansible-playbook playbooks/00.1_swim_deploy_image_server.yml
 
 # --- Non-disruptive, safe to run live in front of an audience ----------------
 ansible-playbook playbooks/00.2_swim_validate_compliance.yml         # baseline: NON_COMPLIANT
-ansible-playbook playbooks/01.1_swim_import_and_tag.yml    # import + golden tag
+ansible-playbook playbooks/01.1_swim_import_and_tag.yml    # import + assign family + golden tag
 ansible-playbook playbooks/01.2_swim_distribute.yml        # stage to flash
 
 # --- Maintenance window only — RELOADS DEVICES ------------------------------
@@ -440,7 +442,7 @@ automatically (or on demand via **Actions → SWIM PSIRT Pipeline → Run workfl
 | Step | Playbook | Purpose |
 |---|---|---|
 | 1 | `00.2_swim_validate_compliance.yml` | Pre-upgrade IMAGE compliance baseline |
-| 2 | `01.1_swim_import_and_tag.yml` | Import images + golden tag |
+| 2 | `01.1_swim_import_and_tag.yml` | Import images, assign device family, golden tag |
 | 3 | `01.2_swim_distribute.yml` | Stage image to device flash |
 | 4 | `01.3_swim_activate.yml` | Activate (reloads devices) |
 | 5 | `00.2_swim_validate_compliance.yml -e post_activate=true` | Post-activation check + pre/post report |
@@ -616,6 +618,7 @@ Imported at the top of every stage. It:
 | Key | Consumed by | Contents |
 |---|---|---|
 | `import_images[]` | 01.1 | Remote-URL import payloads (de-duplicated) |
+| `product_assignments[]` | 01.1 | `{image_name, product_name, site_name}` — one per image, binding it to a device family |
 | `golden_tag_images[]` | 01.1, 00.2 | `tagging_details{image_name, device_role, device_image_family_name, site_name}` |
 | `distribute_images[]` | 01.2 | `image_distribution_details{...}` |
 | `activate_images[]` | 01.3 | `image_activation_details{...}` |
@@ -630,7 +633,7 @@ translation point from data model to API payload.
 |---|---|---|
 | 00.1 | `apt`, `template`, `command` (rsync), `community.general.ufw`, `uri` | Verifies each image with an HTTP HEAD expecting `200` + `application/octet-stream` |
 | 00.2 | `network_compliance_workflow_manager` | Default: pre-upgrade baseline → `00_preflight.json`. `-e post_activate=true`: reachability poll, post check + combined pre/post report. |
-| 01.1 | `swim_workflow_manager` | Import by URL, then golden tag per family/role/site |
+| 01.1 | `swim_workflow_manager`, `product_names_info`, `uri` | Import by URL → bind each image to its device family → golden tag per family/role/site. The binding is a raw `POST .../siteWiseProductNames` because the `images_site_wise_product_names` module never passes the image ID to the SDK (see `assign_product_names.yml`). |
 | 01.2 | `swim_workflow_manager` | Long-running — honours `image_distribution_timeout` from settings (default 3600s) |
 | 01.3 | `swim_workflow_manager` | Honours `device_upgrade_mode`, `distribute_if_needed`, `schedule_validate`, `image_activation_timeout` |
 | 02.1 | `swim_workflow_manager` | Re-tags `rollback_image` golden with `activate_lower_image_version: true`; honours `activation.*` like stage 01.3 |
@@ -708,9 +711,11 @@ ansible-playbook playbooks/00.2_swim_validate_compliance.yml -e catc_debug=true
 | Each project entry must define a `swim` block | Missing `image_server_base_url` or `upgrade_image` | Add both to every `project[]` entry — SWIM validates all entries, not just the first |
 | 00.1 HTTP HEAD verification fails | nginx not serving, ufw blocking, or image not staged | `curl -I http://<image_server_ip>/images/<file>.bin` from the control node |
 | 01.1 import fails / times out | Catalyst Center cannot reach the image server | Confirm CatC → image server TCP/80 reachability; the URL must be resolvable *from CatC*, not from your laptop |
+| 01.1 fails: `Catalyst Center has no device product name matching …` | `swim.device_image_family_name` does not match a product name CatC knows | The failure lists the partial matches it does know — copy one verbatim, or read the Family Name column under **Design > Image Repository**. This is the image's product family, not the inventory `device_series_name`. |
 | Golden tag applied but 01.2 finds no devices | Devices not assigned to the site, or `device_role` too narrow | Verify site assignment in CatC inventory; try `device_role: "ALL"` |
 | 01.2 / 01.3 times out | Large image, slow link, or slow device reload | Raise `activation.image_distribution_timeout` / `activation.image_activation_timeout` in `settings.json` (default 3600s each). On CatC ≤ 2.3.7.9, also raise `catalystcenter_api_task_timeout` in `connection.yml`. |
 | `sshpass: command not found` in 00.1 | Password SSH auth without sshpass | `brew install sshpass`, or switch the image server to SSH keys and drop `ansible_ssh_pass` |
+| `Catalyst Center Python SDK is not installed. Execute 'pip install catalystcentersdk'` | `ansible-playbook` resolved to a pyenv shim instead of `.venv`. `static_inventory.yml` runs CatC modules under `ansible_playbook_python`, so the SDK must live in the *same* interpreter that runs Ansible — installing it globally is not the fix. | `direnv allow` (`.envrc` prepends `.venv/bin`), or `source .venv/bin/activate`. Confirm with `ansible-playbook --version` — the reported python must be `.venv/bin/python`. |
 | `Attempting to decrypt but no vault secrets found` | `.vault_pass` missing or unreadable | Recreate it at the repo root; `ansible.cfg` points at `../.vault_pass` |
 | rsync restarts repeatedly in 00.1 | Low-MTU VPN path | Expected — the role retries with resume. Tune `image_rsync_retries` / `image_rsync_timeout`. |
 | Post-activation 00.2 still reports `NON_COMPLIANT` or skips devices | Devices not fully back online after reload | Post-activate mode polls reachability first (`activation.wait_for_reachability`, default true). Raise `reachability_poll_timeout` (default 600s) or `reachability_poll_interval` (default 60s), or re-run with `-e post_activate=true` after inventory settles. |
