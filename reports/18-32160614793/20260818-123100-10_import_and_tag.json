@@ -1,4 +1,26 @@
 {
+    "assign_product_names": [
+        {
+            "already_assigned": true,
+            "changed": false,
+            "image_name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
+            "name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin -> Cisco Catalyst 9000 UADP 8 Port Virtual Switch @ {site-hierarchy}",
+            "product_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+            "product_name_ordinal": "",
+            "response": {},
+            "site_name": "{site-hierarchy}"
+        },
+        {
+            "already_assigned": true,
+            "changed": false,
+            "image_name": "cat9kv-universalk9.17.15.03.SPA.bin",
+            "name": "cat9kv-universalk9.17.15.03.SPA.bin -> Cisco Catalyst 9000 UADP 8 Port Virtual Switch @ {site-hierarchy}",
+            "product_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
+            "product_name_ordinal": "",
+            "response": {},
+            "site_name": "{site-hierarchy}"
+        }
+    ],
     "import": {
         "changed": false,
         "msg": "All items completed",
@@ -68,6 +90,7 @@
                     "tagging_details": {
                         "device_image_family_name": "Cisco Catalyst 9000 UADP 8 Port Virtual Switch",
                         "device_role": "ALL",
+                        "device_tags": [],
                         "image_name": "cat9kv-universalk9.BLD_V262_THROTTLE_LATEST_20260529_003538.SSA.bin",
                         "site_name": "{site-hierarchy}",
                         "tagging": true

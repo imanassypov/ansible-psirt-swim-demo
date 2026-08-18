@@ -55,25 +55,13 @@
             "total_checked": "6"
         }
     },
-    "post_run_id": "20260817-121451",
-    "pre_run_id": "20260817-121152",
+    "post_run_id": "20260818-123431",
+    "pre_run_id": "20260818-123040",
     "pre_upgrade": {
         "sites": [
             {
-                "compliant": 6,
+                "compliant": 2,
                 "devices": [
-                    {
-                        "configured_image": "n/a",
-                        "device": "device-01",
-                        "intended_image": "n/a",
-                        "status": "COMPLIANT"
-                    },
-                    {
-                        "configured_image": "n/a",
-                        "device": "device-02",
-                        "intended_image": "n/a",
-                        "status": "COMPLIANT"
-                    },
                     {
                         "configured_image": "n/a",
                         "device": "device-03",
@@ -85,31 +73,24 @@
                         "device": "device-04",
                         "intended_image": "n/a",
                         "status": "COMPLIANT"
-                    },
-                    {
-                        "configured_image": "n/a",
-                        "device": "device-05",
-                        "intended_image": "n/a",
-                        "status": "COMPLIANT"
-                    },
-                    {
-                        "configured_image": "n/a",
-                        "device": "device-06",
-                        "intended_image": "n/a",
-                        "status": "COMPLIANT"
                     }
                 ],
                 "non_compliant": 0,
                 "site": "{site-hierarchy}",
-                "skipped_devices": [],
+                "skipped_devices": [
+                    "device-05",
+                    "device-02",
+                    "device-01",
+                    "device-06"
+                ],
                 "task_failed": false,
-                "total_checked": 6
+                "total_checked": 2
             }
         ],
         "totals": {
-            "compliant": "6",
+            "compliant": "2",
             "non_compliant": "0",
-            "total_checked": "6"
+            "total_checked": "2"
         }
     },
     "skipped_devices": [],

@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-08-18T16:34:32.662441+00:00",
+  "report_directory": "18-32160614793",
+  "evidence_files": [
+    "20260818-123040-00_preflight.json",
+    "20260818-123100-10_import_and_tag.json",
+    "20260818-123140-20_distribute.json",
+    "20260818-123149-30_activate.json",
+    "20260818-123430-00_post_activate.json",
+    "20260818-123431-00_compliance_pre_post.json"
+  ],
+  "compliance_pre_post": "20260818-123431-00_compliance_pre_post.json",
+  "preflight": "20260818-123040-00_preflight.json",
+  "post_activate": "20260818-123430-00_post_activate.json",
+  "import_and_tag": "20260818-123100-10_import_and_tag.json"
+}

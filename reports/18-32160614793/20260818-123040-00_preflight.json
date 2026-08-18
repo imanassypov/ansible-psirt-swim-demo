@@ -1,0 +1,80 @@
+{
+    "compliance": {
+        "changed": true,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": true,
+                "diff": [],
+                "failed": false,
+                "item": "{site-hierarchy}",
+                "msg": {
+                    "Run Compliance Check Skipped for following device(s)": {
+                        "skipped_count": 4,
+                        "skipped_devices": [
+                            "device-05",
+                            "device-02",
+                            "device-01",
+                            "device-06"
+                        ]
+                    },
+                    "Run Compliance Check Succeeded for following device(s)": {
+                        "Compliant Devices": 2,
+                        "Non-Compliant Devices": 0,
+                        "Total Devices Checked": 2
+                    }
+                },
+                "response": {
+                    "device-03": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id={device-id}",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "{device-id}",
+                            "lastSyncTime": 1787068986093,
+                            "lastUpdateTime": 1787070646159,
+                            "remediationSupported": false,
+                            "sourceInfoList": [],
+                            "state": "SUCCESS",
+                            "status": "COMPLIANT"
+                        }
+                    ],
+                    "device-04": [
+                        {
+                            "ackStatus": "UNACKNOWLEDGED",
+                            "additionalDataURL": "/api/v2/device-image/device?id={device-id}",
+                            "complianceType": "IMAGE",
+                            "deviceUuid": "{device-id}",
+                            "lastSyncTime": 1787068966097,
+                            "lastUpdateTime": 1787070646159,
+                            "remediationSupported": false,
+                            "sourceInfoList": [],
+                            "state": "SUCCESS",
+                            "status": "COMPLIANT"
+                        }
+                    ]
+                },
+                "status": "success"
+            }
+        ],
+        "skipped": false
+    },
+    "phase": "pre-upgrade",
+    "resync": {
+        "changed": false,
+        "msg": "All items completed",
+        "results": [
+            {
+                "ansible_loop_var": "item",
+                "changed": false,
+                "diff": [],
+                "failed": false,
+                "item": "{site-hierarchy}",
+                "msg": "No changes were made. No inventory actions were performed in Cisco Catalyst Center.",
+                "response": "No changes were made. No inventory actions were performed in Cisco Catalyst Center."
+            }
+        ],
+        "skipped": false
+    }
+}
